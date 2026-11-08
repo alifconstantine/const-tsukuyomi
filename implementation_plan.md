@@ -14,6 +14,7 @@ ConstOS dikembangkan sebagai distro Linux untuk pengembangan perangkat lunak dan
 | Diagnosis, telemetri, dan AI | `constos-core` memasang CLI Rust `const` pada sistem terpasang. `const doctor` memeriksa kernel, swap ZRAM, unit systemd yang gagal, ruang tersedia di `/`, serta konfigurasi Snapper dan mount `/.snapshots`. Collector dan daemon Rust `constd` lulus uji host pada bukti di bawah. | Uji dua pemeriksaan storage pada target terpasang. Integrasikan daemon Rust dan sambungkan UI/Waybar ke kontrak IPC sesi. Profil live saat ini tidak mewajibkan Harness atau Ollama. |
 | Pembaruan | `const update` membuka transaksi penuh pacman dari terminal pada sistem terpasang. | Siapkan repo rilis ConstOS bertanda tangan dan tuntaskan skenario update, reboot, dan recovery pada kandidat rilis. |
 | Capture desktop | Print, Alt+Print, launcher, dan Waybar memanggil `constos-screenshot`. Pengambilan layar penuh ke PNG clipboard telah diperiksa pada ISO antara; penolakan/error dan cancel tanpa perubahan clipboard telah diperiksa melalui smoke terisolasi. | Belum ada bukti cancel/seleksi area `slurp` interaktif di VM. Preview, simpan berkas, anotasi, rekaman video, dan rekaman audio tetap berada di fase 07A. |
+| Shell dan aplikasi target | Paket desktop memakai Hyprland, Waybar, Wofi, Mako, Foot dengan Bash sebagai login shell awal, serta Thunar. GTK menyediakan Welcome dan Recommended Apps. | Const Hub, pengaturan Foot, tema Liquid Glass, Const Store, dock, widget, dan Dynamic Island adalah target pengembangan. |
 
 Smoke manual pada 6 November memakai VM QEMU/OVMF dengan 4 vCPU dan 3 GiB RAM. Kernel `7.3.1-1-cachyos-bore` berjalan di sesi Wayland, `systemctl --failed` melaporkan 0 unit gagal, dan `journalctl` bisa dibuka dari console fallback. Nama host live masih `CachyOS`. Instalasi ke disk dan boot perangkat fisik masih perlu diuji. [Panduan build](docs/build-guide.md)
 
@@ -126,8 +127,8 @@ Audit sebelum push menemukan konfigurasi `makepkg` host memakai `target-cpu=nati
 | --- | --- | --- |
 | **A · Live Alpha** | 01 | ISO dari checkout bersih, sesi installer, dan konsol diagnostik bekerja di UEFI. |
 | **B · Installable Alpha** | 02–05 | Instalasi disk kosong, reboot tanpa ISO, aplikasi inti desktop, konfigurasi akun yang bertahan, dan snapshot awal Snapper dibuktikan pada VM. Bukti rollback dan perangkat fisik dicatat terpisah. |
-| **C · Desktop Beta** | 06–10, termasuk 07A–07B | Menu dan Settings dengan aksi nyata, screenshot, rekaman video/audio, jalur pemasangan aplikasi Windows teruji, widget, Dynamic Island opsional, serta hasil uji perangkat dan baseline performa. Android mengikuti hasil penerimaan terpisah. |
-| **D · Harness Beta** | 11–13 | Paket Linux Harness, monitor sistem, dan computer use lokal dengan scope, consent, Stop, dan batas kemampuan yang jelas. |
+| **C · Desktop Beta** | 06–10, termasuk 07A–07B | Shell minimalis dan Const Hub dengan aksi nyata, Const Store, dock dan Dynamic Island opsional, widget bawaan, capture pengguna, pemasangan aplikasi Windows teruji, serta hasil uji perangkat dan performa. Android mengikuti hasil penerimaan terpisah. |
+| **D · Harness Beta** | 11–13 | Paket Linux Harness, draft widget dengan preview dan persetujuan, serta computer use lokal dengan scope, consent, Stop, dan batas kemampuan yang jelas. |
 | **E · ConstOS 1.0** | 14–15 | Paket dan ISO bertanda tangan, update/rollback teruji, hardware yang didukung terdokumentasi, dan batas Harness dibuktikan di sesi Wayland nyata. |
 
 Untuk 1.0, prioritaskan satu jalur resmi **UEFI x86_64 + Hyprland + CachyOS**. Jalur alpha memakai VM OVMF dan kemudian minimal satu laptop atau desktop fisik yang dicatat model GPU, storage, Wi-Fi, dan RAM-nya. Status NVIDIA, hybrid GPU, CPU lama, LUKS, dual boot, dan Secure Boot dilaporkan per skenario yang benar-benar lulus. Desktop dasar harus tetap bisa digunakan tanpa login Harness atau koneksi ke penyedia AI.
@@ -141,24 +142,23 @@ Setiap item yang mulai dikerjakan harus mencatat pemilik perubahan, dependensi, 
 | Jalur | Dependensi dan prioritas |
 | --- | --- |
 | Live dan installer | P0: boot, console recovery, pemisahan live/installed, install, reboot, dan jalur update/recovery. Polesan visual tidak boleh menghalangi diagnosis atau instalasi. |
-| Settings dan Monitor | Fase 04 membuat kontrak state dan provider minimum yang dipakai UI; fase 08 memperluas collector dan Monitor. Jangan menunggu seluruh fase 08 untuk menyambungkan Settings ke data nyata. |
+| Shell dan Const Hub | Buktikan launcher dan satu kontrol audio dengan provider bersama sebelum memperluas shell. Fase 04 menetapkan kontrak state, fase 06 menetapkan token, dan fase 07 mengganti satu permukaan pada satu waktu. Fase 08 memperluas collector untuk Monitor dan widget. |
+| Welcome dan Const Store | Validasi Welcome pada target. Pakai katalog yang sama untuk Recommended Apps dan Const Store. Discovery dan transaksi milik Store, konfigurasi desktop milik Hub. |
 | Capture pengguna | Screenshot dasar diuji di fase 02; fase 07A menyelesaikan UI serta rekaman video/audio sebelum Desktop Beta. Probe portal dilakukan lebih awal; fitur ini tidak menunggu Harness. |
 | Kompatibilitas aplikasi | Fase 07B memakai installer target fase 03 dan launcher serta asosiasi file fase 02. Prioritaskan Windows, kemudian Waydroid opsional. |
-| Widget dan Island | Memakai sumber data fase 07–08. Island opsional dan tidak boleh menjadi satu-satunya tempat indikator rekaman atau tombol Stop. |
-| Harness | Probe observasi/izin Wayland boleh berjalan sejak live boot. Integrasi fase 11–13 tidak menghambat desktop, screenshot, atau perekam yang dipakai pengguna biasa. |
+| Dock, widget, dan Island | Dock memakai model aplikasi/jendela shell. Widget dan Island memakai sumber data fase 07–08. Dock dan Island dapat dimatikan secara independen. Indikator rekaman dan tombol Stop tersedia di luar Island. |
+| Harness | Probe observasi/izin Wayland dapat dimulai saat sesi Hyprland target tersedia. Draft widget bergantung pada paket Harness dan schema widget, sehingga dapat dikirim terpisah dari computer use. Desktop, screenshot, dan recorder tetap bekerja tanpa agen. |
 
 Arsitektur dan batas kepercayaan ada di [docs/architecture.md](docs/architecture.md). Kebijakan perubahan dokumen ada di [AGENTS.md](AGENTS.md); prosedur kerja tersedia melalui [SKILLS.md](SKILLS.md).
 
 ## Temuan dari Ryoku dan Const Harness
 
-Referensi ini memakai Ryoku `v1.0.7` (`f7197d72d`) dan Const Harness dari monorepo `const` (`d77752fb`). Path di bawah relatif terhadap root repo masing-masing.
+Referensi ini memakai Ryoku `v1.0.7` (`f7197d72d`) dan Const Harness dari monorepo `const` (`d77752fb`). Path di bawah relatif terhadap root repo masing-masing. [Audit desktop Ryoku](docs/audits/2026-11-08-ryoku-desktop.md) mencatat rujukan source, perbedaan dengan implementasi sekarang, dan pola yang dipilih untuk dock, Hub, Store, terminal, serta widget.
 
 | Referensi yang dicek | Pola yang dipakai di ConstOS |
 | --- | --- |
 | Ryoku `installation/iso/build.sh`, `installation/tests/README.md`, `installation/backend/lib/filesystem.sh` dan `snapshots.sh` | Pisahkan staging, build ISO, dan instalasi target. Tes QEMU harus benar-benar melepas ISO, reboot, dan memeriksa filesystem, konfigurasi, serta paket hasil instalasi. |
 | Ryoku `release/packages/ryoku-desktop/PKGBUILD`, `system/services/manifest.tsv`, `docs/updates.md` | Setiap default punya pemilik paket. Pengaturan pengguna diletakkan terpisah dari default paket. Enablement service, pengiriman konfigurasi, dan diagnosis drift memiliki alur yang bisa diuji. |
-| Ryoku `docs/ui-ux.md`, `docs/launcher.md`, `docs/stage.md`, `ryoku/hub/quickshell/pages/DisplaysPage.qml` | Pakai token bersama, pisahkan launcher/panel/widget, dan beri pengaturan display mekanisme konfirmasi atau revert otomatis. |
-| Ryoku `ryoku/shell/quickshell/shell/modules/bar/barstyles/kairos/Scene.qml` dan `components/Island.qml` | Kairos sudah memperlihatkan pola per-output, ruang tetap untuk bar, konten yang berubah ukuran, dan input mask. Pelajari prinsip itu untuk Dynamic Island ConstOS. Audit desain dan lisensi repo Windows saat tautannya diberikan. |
 | Ryoku `ryoku/shell/plugin/systemmonitor.cpp` dan `docs/performance.md` | Pisahkan collector dari UI. Ukur PSS, CPU, wakeups, dan frame saat idle maupun saat panel terbuka sebelum menambah polling atau animasi. |
 | Harness `apps/harness/desktop/package.json`, `apps/harness/DESIGN.md`, `apps/harness/UPDATES.md` | Desktop sekarang memakai Electron, React, TypeScript, Vite, dan `node-pty`. Build upstream punya target Linux pacman dan AppImage. Bawa style studio dan pola izin yang bisa dipahami, lalu buktikan paket Linux berisi runtime lengkap. Pada ConstOS, pacman menjadi pemilik update paket Harness. |
 | Harness `apps/harness/desktop/native/README.md`, `native/computer-use-linux/runtime.py`, `electron/computer/computer-controller.ts` | Windows memakai PowerShell/Win32/UI Automation, macOS memakai Swift, dan Linux memakai Python/PyGObject/AT-SPI. Wayland saat ini mengiklankan aksi semantik terbatas. Pertahankan kontrak handshake, antrean request, lease, dan snapshot yang sudah ada saat menambahkan provider Wayland baru. |
@@ -227,7 +227,7 @@ Revisi kiosk di atas commit `bcd137b2` mengikuti laporan pengguna dari VM. Pada 
 
 **Fase lulus jika** tes QEMU melakukan instalasi, melepas ISO, reboot, login ke akun baru, dan memverifikasi kernel, jaringan, desktop, filesystem, ZRAM, serta update dari repo yang dipercaya. Simulasikan mirror gagal dan satu kegagalan instalasi yang dapat didiagnosis. Uji recovery hingga sistem masuk lagi.
 
-## Fase 04 · Settings dan tindakan sistem
+## Fase 04 · Const Hub dan tindakan sistem
 
 - [ ] Buat spike UI kecil untuk **Display**, **Audio**, dan **About**. Sambungkan masing-masing ke sumber data nyata. Tetapkan navigasi, pencarian Settings, error message, dan satu komponen form yang mendukung keyboard. Mulai About dari `os-release`, versi kernel/compositor, dan petunjuk diagnosis. Kaitkan ke Doctor lengkap pada fase 08.
 
@@ -236,13 +236,15 @@ Revisi kiosk di atas commit `bcd137b2` mengikuti laporan pengguna dari VM. Pada 
 | Display & Input | Scale, resolusi, refresh rate, posisi monitor, layout keyboard, touchpad, aksesibilitas | Hyprland dan konfigurasi per-user. Mode display disimpan setelah pengguna memilih **Keep** dalam countdown. Gagal atau timeout mengembalikan layout sebelumnya. |
 | Audio & Perangkat | Volume, mute, input/output, brightness, Bluetooth status | PipeWire/WirePlumber, backlight yang tersedia, dan BlueZ. UI menampilkan perangkat yang hilang dan status izin. |
 | Network | Wi-Fi, koneksi aktif, detail dasar, buka editor jaringan | NetworkManager. Kredensial dikelola oleh dialog/secret agent yang sesuai. |
-| Appearance & Desktop | Tema, wallpaper, aksen default/manual/dari wallpaper, ukuran UI, reduced motion, panel, keybinds, widget, preferensi Island | Default paket dan override pengguna mengikuti [design.md](design.md). Preview dapat dibatalkan; mode manual tidak berubah saat wallpaper diganti. Konflik keybind terlihat sebelum Apply. |
+| Appearance & Desktop | Tema, wallpaper, aksen, ukuran UI, reduced motion, panel, keybinds, widget, toggle Dock dan Dynamic Island | Default paket dan override pengguna mengikuti [design.md](design.md). Preview dapat dibatalkan. Konflik keybind terlihat sebelum Apply. |
+| Terminal | Font dan ukuran, profil warna, bentuk kursor, dan riwayat scrollback Foot | Default vendor dan override per-user. Tampilkan kapan perubahan berlaku. Reset hanya bidang yang dikelola Hub. Bash tetap menjadi login shell awal. |
 | Power, Privacy & Session | Battery dan profil yang tersedia, idle/lock, notifikasi, akses computer use | UPower/logind, satu pengelola power profile, dan izin sesi Harness. Tombol Stop/revoke mengikuti status nyata. |
 | System | About, status update, shortcut ke System Monitor dan Doctor, lokasi log | CLI `const`, sistem paket, dan service terkait. Kontrol sensitif dirilis setelah kebijakan serta pemulihannya lulus. |
 
 - [ ] Buat kontrak bertipe untuk nilai, capability, perubahan, dan error. UI hanya menawarkan aksi yang valid untuk hardware dan sesi. Simpan user prefs dengan penulisan atomik dan migrasi schema yang bisa diuji ulang. Sediakan reset per bagian dan back up preferensi lama sebelum migrasi.
 - [ ] Gunakan provider yang sudah menguasai subsistem melalui API atau adaptor sempit. Jalankan perubahan tingkat user dalam sesi. Untuk aksi sistem yang dipilih, pakai mekanisme otorisasi per operasi dan tampilkan kegagalan tanpa mengubah status UI menjadi sukses.
 - [ ] Definisikan provider minimum dan schema state sebelum spike UI: capability, nilai aktual, aksi pending, error, dan resync. UI tidak membaca metrik hardcode atau menjalankan string shell dari input pengguna. Perluas kontrak ini di fase 08, bukan membuat collector kedua.
+- [ ] **Migrasi preferensi.** Inventarisasi konfigurasi dari `/etc/skel` yang sudah disalin ke home pengguna. Buat cadangan dan migrasi idempoten untuk file yang mulai dikelola. Uji akun lama yang punya edit lokal, akun baru, dan reset dari Hub.
 
 **Fase lulus jika** halaman Settings dapat apply/cancel dan mengembalikan layout display. Uji restart sesi, pengguna kedua, preferensi rusak, hardware hilang, dan perubahan dari luar UI. Pakai kontrak state yang sama untuk menu cepat ketika menu itu dihubungkan di fase 07.
 
@@ -261,7 +263,7 @@ Revisi kiosk di atas commit `bcd137b2` mengikuti laporan pengguna dari VM. Pada 
 Acuan awal tersedia di [design.md](design.md): identitas hitam/putih, aksen biru, token warna, tipografi, style komponen, serta kontrak preview dan tema adaptif dari wallpaper. Ini keputusan desain, bukan tema yang telah diterapkan atau kelulusan fase. Penyusunan desain dimulai sebelum integrasi fase 06 dan tidak menghambat installer.
 
 - [ ] Implementasikan token pada [design.md](design.md) sebagai satu sumber versi. Review palet, tipografi, spacing, radius, fokus, motion, dan state pada prototype sebelum menerapkan adapter GTK, Qt, Foot, SDDM, serta shell. Boot/greeter memakai palet vendor statis; preferensi sesi pengguna tidak dibaca sebelum login.
-- [ ] Buat wireframe yang saling terhubung untuk **Launcher**, **Quick Settings**, **Notification Center**, **Workspace/Tray**, **Power/Session**, **Desktop Context Menu**, dan **Welcome**. Bedakan permukaan yang selalu terlihat, yang muncul atas interaksi, dan yang boleh mengambil keyboard focus. Gunakan satu skala dan satu aturan closing lewat Escape atau klik luar.
+- [ ] Buat wireframe yang saling terhubung untuk **Launcher**, **Quick Settings**, **Notification Center**, **Workspace/Tray**, **Power/Session**, **Desktop Context Menu**, **Welcome**, **Const Hub**, **Const Store**, **Dock**, dan **Dynamic Island**. Bedakan permukaan yang selalu terlihat, yang muncul atas interaksi, dan yang boleh mengambil keyboard focus. Gunakan satu skala dan satu aturan closing lewat Escape atau klik luar.
 - [ ] Pakai ImageGen nanti untuk eksplorasi wallpaper, tekstur, ilustrasi onboarding, dan latar boot/login. Simpan shortlist dan render final yang disetujui. Pakai vektor yang terbaca untuk ikon aksi serta logo, dengan raster fallback jika format boot membutuhkannya. Ekspor varian light/dark, crop untuk layar berbeda, dan ukuran yang sesuai target.
 - [ ] Tetapkan manifest aset berisi ID stabil, pemilik paket, penggunaan, sumber/versi, lisensi/izin redistribusi, file editable, ekspor, dimensi, dan varian. Audit juga logo yang sudah ada; sumber yang belum diketahui dicatat sebagai blocker rilis, bukan diberi lisensi asumsi. Uji keterbacaan teks, kontras, font/cursor/icon fallback, ukuran initramfs, dan tampilan 100–200% scaling. Pastikan aset tersedia dalam paket serta initramfs yang memakainya.
 - [ ] Buat katalog surface dan state untuk greeter, lockscreen, launcher, panel, Settings, dialog izin, capture toolbar/preview, recorder, pemilih widget, OSD volume/brightness, serta notifikasi. Catat aksi masuk/keluar, pemilik fokus, Escape/Back, tab order, state loading/error/denied, dan perilaku saat monitor hilang. Review alur lengkap, bukan hanya screenshot layar utama.
@@ -279,13 +281,17 @@ Acuan awal tersedia di [design.md](design.md): identitas hitam/putih, aksen biru
 | Quick Settings | Wi-Fi, Bluetooth, volume, brightness, Do Not Disturb, battery/power. Klik aksi memberi status pending lalu mengikuti state backend. Klik detail membuka halaman Settings terkait. |
 | Notification Center | Tampilkan notifikasi, aksi asal, dismiss, dan DND. Pilih satu pemilik `org.freedesktop.Notifications` per sesi. Riwayat lokal punya batas dan dapat dihapus. |
 | Workspace, tray, context | Pindah workspace, buka item tray, menu desktop untuk wallpaper/widgets/Settings, dan menu aplikasi dengan aksi yang didukung. Adapter Hyprland membaca event dan melakukan resync setelah compositor restart. |
-| Power & Welcome | Lock, logout, suspend, reboot, shutdown dengan state capability dan konfirmasi yang sesuai. Welcome memperkenalkan pintasan dasar, bisa dilewati atau dibuka lagi, dan menautkan Recommended Apps. Integrasi tema dan skala menyusul sesudah Settings siap. |
+| Power & Welcome | Lock, logout, suspend, reboot, shutdown dengan state capability dan konfirmasi yang sesuai. Welcome memperkenalkan pintasan dasar, bisa dilewati atau dibuka lagi, dan nantinya membuka rekomendasi di Const Store. |
+| Dock aplikasi | Dock bawah opsional menampilkan pin, aplikasi yang berjalan, dan jendela yang dikelompokkan. Klik membuka atau memfokuskan aplikasi, keyboard dapat berpindah antarjendela, dan launcher tetap dapat dibuka saat dock dimatikan. |
+| Const Store | Katalog, pencarian, dan Library untuk aplikasi Flathub terkurasi. Mulai dari daftar Recommended Apps. Tampilkan sumber, scope, progres, dan hasil transaksi. Pengaturan aplikasi maupun tampilan desktop tetap di Const Hub. |
 | Clipboard dan OSD | Pilih/paste/hapus item teks atau gambar dari UI dengan batas riwayat, opsi menonaktifkan penyimpanan, dan clear. Jangan tampilkan riwayat di lockscreen. OSD volume, mute, dan brightness mengikuti state backend tanpa mencuri fokus. |
 | Capture | Shortcut, launcher, dan panel membuka alur screenshot atau recorder yang sama. Panel menampilkan sumber, durasi, mute, dan Stop berdasarkan status nyata dari fase 07A. |
 
 - [ ] Bagikan registry aksi dan state dengan Settings, keybind, widget, serta Island. Gunakan ID aksi dan parameter tervalidasi, dengan label terjemahan terpisah. Aksi UI memanggil adapter yang punya batas, agar string pencarian dan isi notifikasi tidak menjadi perintah shell.
 - [ ] Pindahkan satu permukaan pada satu waktu dari Waybar, Wofi, atau Mako setelah pengganti lolos tes. Sediakan sesi fallback untuk pemulihan dari TTY. Pastikan applet tray, auth agent, dan notification daemon hanya dimulai sekali.
 - [ ] **Onboarding target.** Sumber GTK dan paket sudah tersedia. Buktikan Welcome muncul satu kali per akun, bisa dibuka ulang, dan katalog Flathub memasang serta membuka aplikasi aktual. Jalankan skenario offline, retry, dan akun kedua sesuai [panduan penerimaan](docs/acceptance-guide.md#welcome-dan-recommended-apps).
+- [ ] **Const Store.** Selaraskan scope, origin, dan ref antara daftar aplikasi terpasang dan aksi per-user. Pakai satu backend untuk halaman rekomendasi dan Library. Uji install, buka, update, hapus, offline/retry, serta aplikasi yang juga terpasang system-wide atau pada branch berbeda. Pacman dan `const update` tetap mengelola paket OS.
+- [ ] **Dock aplikasi.** Mulai di monitor utama dengan pin per akun, satu tombol per aplikasi, dan pengelompokan jendela. Uji pencocokan Desktop Entry dengan app ID, pemindahan fokus, layar penuh, hotplug, serta pelepasan input mask dan reservasi tepi ketika dimatikan.
 
 **Fase lulus jika** setiap item yang terlihat punya fungsi atau alasan disabled, hasilnya tampil kembali di UI, dan fokus pulih ke aplikasi sebelumnya setelah panel ditutup. Uji input cepat, monitor dicabut, daemon restart, izin ditolak, serta bahasa dengan label panjang.
 
@@ -342,6 +348,7 @@ Sumber metrik dan batasnya dicatat bersama setiap collector. [Dokumentasi /proc]
 - [ ] Tetapkan katalog widget bawaan: jam/tanggal, battery, jaringan, media, dan metrik sistem di atas. Tiap widget punya ID stabil, schema preferensi/versi, sumber data, aksi yang diizinkan, refresh policy, serta state unavailable/error. Kalender, timer, disk, dan aktivitas Harness hanya ditambahkan saat backend masing-masing tersedia; jangan membuat nilai contoh terlihat sebagai data pengguna.
 - [ ] Sediakan pemilih widget dengan tambah/hapus, konfigurasi, reorder, resize bila didukung, preview, dan reset. Bedakan instance widget dari jenisnya. Migrasikan layout per-user tanpa duplikasi ketika output berubah, saat upgrade, atau saat konfigurasi rusak; pengguna kedua tidak mewarisi data pribadi pengguna pertama.
 - [ ] Widget bawaan hanya memakai adapter yang ditentukan paket, bukan string perintah bebas. Konten widget bukan otorisasi aksi sistem. Kegagalan satu provider menampilkan error lokal tanpa menjatuhkan shell. Plugin pihak ketiga tidak masuk dukungan 1.0 sampai format, izin, kompatibilitas, dan isolasinya diputuskan.
+- [ ] Siapkan schema draft deklaratif untuk menyusun komponen bawaan dari sumber data yang disetujui. Uji preview, batas ukuran dan refresh, validasi field, draft rusak, serta penolakan kode dan perintah bebas sebelum membuka jalur draft dari Harness.
 
 **Fase lulus jika** metrik sesuai dengan `btop`, `free`, `zramctl`, `findmnt`, dan sumber kernel yang sesuai pada interval pengukuran yang dicatat. Uji data kosong, hardware yang tidak didukung, proses yang keluar, service mati, widget yang ditutup, dan reboot yang mempertahankan layout.
 
@@ -384,8 +391,9 @@ Mulai sebagai surface yang opsional dengan pola interaksi ConstOS. Saat referens
 - [ ] Uji instalasi dan upgrade pada target bersih. Dari launcher, cek startup di Wayland, PTY, pemilihan workspace, browser pane, clipboard, screen sharing aplikasi biasa, session restore, alur login/offline, serta data yang dipertahankan saat upgrade. Gunakan update pacman untuk edisi ConstOS dan sesuaikan perilaku update dalam aplikasi untuk paket distro.
 - [ ] Jalankan Harness sebagai pengguna biasa dan sesuai sesi aktif. Jika pengguna memilih autostart, ikat lifecycle ke sesi dan impor variabel saat login. App tetap dapat digunakan ketika broker computer use tidak tersedia. Tampilkan kapabilitas berdasarkan hasil handshake dan izin runtime.
 - [ ] Buat adapter Rust Linux dalam satu irisan kecil. Host Electron meluncurkan binary versi paket yang ditentukan dan membaca NDJSON dari inherited pipe. Pertahankan kontrak `ready`, `requestId`, handshake, error code, dan batas payload. Cocokkan perilaku dengan fixture yang sudah ada. Setelah host bisa memilih provider dengan aman, baru perluas kemampuan observasi.
+- [ ] **Pembuatan widget lewat Harness.** Setelah schema fase 08 tersedia, kirim satu draft berisi komponen bawaan, misalnya jam dan CPU/RAM. Pengguna meninjau dan menambahkannya dari pemilih widget. Buktikan preview, tolak, simpan, dan hapus. Jalur ini tidak membutuhkan grant computer use.
 
-**Fase lulus jika** paket bisa diinstal, dibuka, diperbarui, dan dihapus dari VM Linux dengan workspace yang tetap bisa diakses. Versi atau capability mismatch menghasilkan pesan yang dapat ditindaklanjuti. Uji workbench ketika computer use dinonaktifkan.
+**Fase lulus jika** paket bisa diinstal, dibuka, diperbarui, dan dihapus dari VM Linux dengan workspace yang tetap bisa diakses. Versi atau capability mismatch menghasilkan pesan yang dapat ditindaklanjuti. Workbench dan preview draft widget bekerja ketika computer use dinonaktifkan.
 
 ## Fase 12 · Native Computer Use, observasi lokal
 
@@ -444,11 +452,10 @@ Rust helper berjalan di sesi pengguna. Akses dibedakan per capability antara **m
 
 | Urutan | Perubahan | Bukti sebelum lanjut |
 | --- | --- | --- |
-| 1 | **Selesai.** Build baseline di Linux dan uji boot normal serta console fallback di QEMU/OVMF. | ISO, checksum, log build, dan bukti desktop serta TTY sudah diperiksa. |
-| 2 | **Selesai pada VM lokal.** Runner Live UEFI lulus pada Windows/WHPX dan Linux/KVM dengan build tercatat. | Bukti 7 November di atas. Workflow GitHub tetap memerlukan runner self-hosted tepercaya saat ingin diaktifkan di CI. |
-| 3 | **Sumber dan smoke awal tersedia.** Tema GRUB, Plymouth, dan SDDM sudah masuk ISO serta diuji pada cold boot KVM dan test mode greeter. | Lengkapi verifikasi manual fallback console GRUB, Escape log Plymouth, autentikasi password gagal/sukses SDDM pada target, dan recovery tema stock sesuai [panduan pengujian terpadu](docs/acceptance-guide.md). |
-| 4 | **Sumber dan probe sesi tersedia.** Aplikasi harian, MIME, GSettings, unit sesi `constos.desktop`, portal, dan `constos-screenshot` sudah masuk ISO serta diverifikasi di KVM. | Lengkapi uji interaktif aplikasi harian, audio, picker portal, seleksi area `Print`, dan lock/logout berulang. |
-| 5 | **Instalasi penuh dan reboot teruji di VM.** Calamares memasang paket core/desktop, menyiapkan GPT/ESP/Btrfs dan snapshot awal, lalu target bisa login setelah ISO dilepas. | Uji update serta recovery sistem dari target terpasang dan verifikasi instalasi pada perangkat fisik. |
-| 6 | **Riset selesai.** Siapkan Wine dalam transaksi target dan integrasikan pemasangan serta peluncuran aplikasi dari Thunar dan Wofi. | Buktikan skenario Windows pada [fase 07B](#fase-07b--kompatibilitas-aplikasi-windows-dan-android), lalu lanjutkan spike Waydroid. |
+| 1 | **Validasi baseline Cage.** Build Linux baru dari SHA yang dicatat, lalu gunakan VM UEFI dengan disk uji. | Dua entri GRUB, installer langsung, Diagnostics, cancel dan buka ulang, instalasi, reboot tanpa ISO, serta login SDDM. Ikuti [panduan pengujian terpadu](docs/acceptance-guide.md). |
+| 2 | **Irisan desktop pertama.** Launcher Liquid Glass, satu halaman Audio di Const Hub, dan satu kontrol volume di Quick Settings. Siapkan alur migrasi konfigurasi sebelum cutover. | Keyboard dan pemulihan fokus, blur/opak, 100–200% scale, dua output, volume berubah pada kedua UI, dan fallback ketika shell gagal. |
+| 3 | **Desktop harian.** Uji Welcome, lanjutkan ke Const Store dari katalog yang sama, dan tambahkan halaman Terminal di Hub. | Instalasi dan peluncuran Flatpak dari akun biasa, hasil Library akurat, serta override Foot bertahan setelah update. |
+| 4 | **Surface opsional.** Kerjakan dock, widget bawaan, lalu Dynamic Island setelah sumber data dan aksi tersedia. | Disable independen, fullscreen, klik di area transparan, work area stabil, hotplug, dan state yang bertahan setelah login ulang. |
+| 5 | **Harness.** Paket Linux yang bisa dibuka, draft widget, lalu observasi dan aksi Wayland sesuai capability. Probe portal bisa dilakukan sejak langkah 1 di target Hyprland. | Draft ditinjau sebelum diterapkan. Buktikan penolakan, Stop, dan hasil aksi untuk setiap capability yang dipromosikan. |
 
-Keputusan yang masih perlu data adalah daftar hardware yang akan didukung, pilihan aplikasi harian, aset Boot UI final, dan backend yang menyediakan cakupan input Wayland. Repo Dynamic Island Windows akan masuk review desain pada fase 09 setelah tautannya tersedia. Pemilihan toolkit shell dan migrasi host Harness dicatat sebagai keputusan berbasis spike agar pekerjaan yang sudah berfungsi tetap bisa dipakai selama pengembangan.
+Backlog ini memprioritaskan pekerjaan desktop dan Harness. Capture pengguna, Wine, recovery, serta pengujian hardware tetap mengikuti gerbang fase masing-masing. Bukti VM lama tetap tercatat pada bagian awal roadmap. Toolkit shell dan cakupan input Wayland ditetapkan dari hasil spike. Repo Dynamic Island Windows masuk review desain pada fase 09 setelah tautannya tersedia.

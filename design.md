@@ -143,9 +143,11 @@ Jangan memakai wallpaper pribadi untuk boot/greeter global. Konfigurasi sesi liv
 
 ## Arah Liquid Glass minimalis
 
-Mulai dari satu launcher pada sesi Hyprland, dengan prototype Quickshell/QML. Pakai permukaan transparan untuk panel yang mengambang, dengan blur lokal, batas tipis, dan aksen biru pada fokus atau pilihan aktif. Konten utama, dialog penting, dan fallback tanpa blur memakai permukaan opak yang mudah dibaca. Ukur kontras di wallpaper terang dan gelap, navigasi keyboard, skala, reduced motion, dan biaya render sebelum memakai efek yang sama di Quick Settings atau panel.
+Mulai dari satu launcher pada sesi Hyprland, dengan prototype Quickshell/QML. Gunakan kaca pada navigasi dan kontrol yang mengambang, dengan tint, blur bawaan compositor pada layer terpilih, batas tipis, dan aksen biru pada fokus atau pilihan aktif. Konten utama dan dialog penting memakai permukaan opak yang mudah dibaca. Sediakan **Reduce Transparency** dan **Reduce Motion**. Ukur kontras di wallpaper terang dan gelap, navigasi keyboard, skala, dan biaya render sebelum memperluas efek. [Apple HIG Materials](https://developer.apple.com/design/human-interface-guidelines/materials) · [Hyprland Layer Rules](https://wiki.hypr.land/configuring/core/rules/layer-rules/)
 
-Ryoku menjadi referensi untuk dua keputusan. Installer dapat menjadi tujuan pertama setelah boot, sedangkan shell dan pilihan gaya bar berada di atas compositor. Pelajari kejelasan langkah dan fallback dari installer Ryoku, serta pemisahan launcher, panel, dan token pada Orpheus atau Kairos. Tetapkan token dan interaksi ConstOS sendiri sebelum meninjau adaptasi aset atau kode. [Installer Ryoku](https://github.com/Ryoku-dev/ryoku/blob/f7197d72de8a21e44b0bea922bdd915f28f6b327/installation/iso/README.md) · [Gaya bar Ryoku](https://github.com/Ryoku-dev/ryoku/blob/f7197d72de8a21e44b0bea922bdd915f28f6b327/docs/barstyles.md)
+Desktop tetap lapang saat idle. Launcher dan menu sistem muncul saat diminta. Dock bawah berfungsi untuk pin dan berpindah antaraplikasi. Dynamic Island di tengah atas berfungsi untuk aktivitas yang sedang berlangsung. Uji keduanya sebagai opt-in pada beta, dengan toggle terpisah di **Const Hub → Appearance & Desktop**. Widget opsional memakai gaya yang sama. Const Hub dan Const Store memakai jendela berisi konten opak dengan material yang sama pada kontrol navigasinya.
+
+Ryoku menjadi referensi untuk pemisahan installer dan desktop, token bersama, serta hit testing Kairos. Tetapkan token dan interaksi ConstOS sendiri sebelum meninjau adaptasi aset atau kode. Plugin refraksi dapat dinilai setelah blur bawaan dan fallback opak lolos pengujian. [Audit Ryoku](docs/audits/2026-11-08-ryoku-desktop.md)
 
 ## Kondisi awal dan keputusan yang belum selesai
 

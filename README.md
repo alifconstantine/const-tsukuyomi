@@ -38,8 +38,9 @@ Arsitektur komponen, batas izin, dan pemisahan profil live dari sistem terpasang
 | Pembaruan | Jalankan `const update` dari terminal pada sistem terpasang. Jika pembaruan tersedia, pacman menampilkan paket OS dan aplikasi dari repo yang dikonfigurasi untuk dikonfirmasi dalam satu transaksi. Lihat [panduan update dan recovery](docs/acceptance-guide.md#update-dan-recovery) untuk cakupan dan verifikasi. |
 | Sandbox dan izin | Ada wrapper Bubblewrap yang menolak eksekusi saat `bwrap` tidak tersedia. Kebijakan akses dan integrasi agen masih perlu diuji. |
 | Screenshot dan rekaman | Print, Alt+Print, launcher, serta Waybar memakai satu helper screenshot area/seluruh desktop dengan clipboard dan cancel. Dukungan runtime mengikuti bukti di roadmap; preview/anotasi serta recorder tetap di fase 07A. |
-| Shell, widget, dan aset | Hyprland menjalankan sesi Wayland. Waybar, Wofi, dan Mako menyediakan panel, launcher, dan notifikasi saat ini. Shell/Settings terpadu dan arah visual Liquid Glass minimalis masih dalam pengembangan. |
-| Welcome dan Recommended Apps | Implementasi target membuka tur pintasan pada login pertama. Kedua tampilan bisa dibuka dari launcher. Katalog menawarkan LibreOffice, VLC, LocalSend, dan KeePassXC dari Flathub. Penerimaan pada sistem terpasang mengikuti roadmap. |
+| Shell dan aplikasi harian | Hyprland menjalankan sesi Wayland. Waybar, Wofi, dan Mako menyediakan panel, launcher, dan notifikasi. Terminal bawaan Foot memakai login shell Bash untuk akun baru. Aplikasi inti mencakup Thunar, Firefox, Mousepad, Ristretto, Evince, dan File Roller. |
+| Shell yang direncanakan | Tema Liquid Glass minimalis, Const Hub untuk Settings termasuk tampilan Foot, dock yang dapat dimatikan, widget, dan Dynamic Island opsional. Harness direncanakan mendukung draft widget serta computer use sesuai capability sesi. |
+| Welcome dan aplikasi opsional | Implementasi target membuka tur pintasan pada login pertama. Welcome dan Recommended Apps bisa dibuka dari launcher. Katalog menawarkan LibreOffice, VLC, LocalSend, dan KeePassXC dari Flathub. Const Store direncanakan memakai katalog yang sama. |
 | Aplikasi Windows dan Android | Direncanakan untuk sistem terpasang. Wine disiapkan oleh installer agar pengguna bisa memasang dan membuka aplikasi Windows dari desktop tanpa setup runtime manual. Waydroid menyusul sebagai pilihan untuk APK yang kompatibel. Lihat [rancangan kompatibilitas aplikasi](docs/app-compatibility.md). |
 
 ---
@@ -95,7 +96,7 @@ sudo bash iso/buildiso.sh --packages-dir "$packages" --calamares-dir "$calamares
 
 ConstOS dikembangkan oleh Alif Constantine. Urutan integrasi, target rilis, dan kriteria verifikasi ada di [roadmap pengembangan](implementation_plan.md).
 
-Arah visual ditetapkan di [design.md](design.md): dasar hitam/putih, aksen biru yang dapat diganti, serta rancangan tema yang mengikuti wallpaper. Dokumen ini menjadi acuan desain; pemilih aksen, generator palet, dan Settings tersebut belum diimplementasikan.
+Arah visual ada di [design.md](design.md). Pemilih aksen, generator palet dari wallpaper, dan Const Hub masih direncanakan. [Audit desktop Ryoku](docs/audits/2026-11-08-ryoku-desktop.md) membandingkan pola yang dipilih dengan sumber ConstOS saat ini.
 
 Baseline ISO live sudah dibangun di Linux dan diuji di VM UEFI. Bukti itu tidak otomatis berlaku untuk integrasi tema/desktop/installer berikutnya. Gunakan [panduan pengujian terpadu](docs/acceptance-guide.md) untuk memeriksa alur baru dari boot sampai instalasi disk kosong dan reboot tanpa ISO; status aktual ada di roadmap.
 

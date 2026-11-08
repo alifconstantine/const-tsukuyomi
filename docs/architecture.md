@@ -91,7 +91,9 @@ Entri GRUB **Install ConstOS** memulai jalur grafis ISO. SDDM memakai autologin 
 
 Paket `constos-desktop` memiliki satu aplikasi GTK untuk **Welcome** dan **Recommended Apps**. Service sesi meminta tampilan Welcome pada login pertama. Aplikasi menyimpan pengabaian per akun di `$XDG_STATE_HOME/constos/welcome-seen`, dengan fallback `~/.local/state`. Startup sesi mengimpor direktori XDG yang dipakai sehingga service dan launcher membaca data pengguna yang sama. Membuka tampilan melalui launcher melewati pemeriksaan penanda. Kedua tampilan berbagi instance aplikasi yang sama.
 
-Katalog memakai ID aplikasi tetap dan Flatpak per pengguna. Klik **Pasang** memicu penyiapan remote dari descriptor Flathub yang disertakan paket Flatpak, bila belum ada. Remote dengan URL berbeda, dinonaktifkan, atau tanpa verifikasi GPG ditolak. UI hanya menampilkan sukses setelah Flatpak mengonfirmasi ref aplikasi yang terpasang.
+Katalog memakai ID aplikasi tetap. Tombol **Install** menyiapkan remote dari descriptor Flathub yang disertakan paket Flatpak bila belum ada, lalu memasang ref untuk pengguna aktif. Remote dengan URL berbeda, dinonaktifkan, atau tanpa verifikasi GPG ditolak. UI menampilkan sukses setelah Flatpak mengonfirmasi ref. Inventaris saat ini masih membaca ID lintas scope dan perlu diselaraskan dengan aksi.
+
+**Const Store** dirancang sebagai pemilik discovery, Library, dan transaksi aplikasi pilihan dari Flathub. Welcome menautkan rekomendasi ke katalog yang sama. Backend membawa scope, origin, dan ref saat membaca dan mengubah status, lalu memuat ulang state setelah hasil transaksi. Pembaruan OS dan paket vendor tetap melalui pacman. Const Hub mengatur preferensi aplikasi dan desktop.
 
 ### Harness dan computer use
 
@@ -101,15 +103,21 @@ Grant sementara memisahkan observasi semantik, visual capture, dan pengiriman in
 
 Sandbox terminal terpisah dari izin desktop. Jangan memberi workspace sandbox socket helper, descriptor portal, keyring, atau akses input global secara otomatis. `/dev/input`, `/dev/uinput`, kontrol root, dan sesi remote/unattended berada di luar jalur computer use rilis awal. Ollama/model lokal bukan dependensi desktop atau isi wajib ISO.
 
+Pembuatan widget lewat Harness memakai jalur draft terpisah dari computer use. Widget host memvalidasi schema versi, tipe komponen, sumber data, dan batas sumber daya. Draft hanya memakai daftar komponen dan binding yang disediakan ConstOS. Shell menampilkan preview dan menyimpan instance ke profil setelah persetujuan pengguna. Draft tidak membawa kode QML/JS, perintah shell, kredensial, atau grant observasi/input.
+
 ## UI, widget, dan aset
 
 UI memakai token visual bersama, aksi bertipe, dan state aktual. Provider memiliki subscription/event serta kebijakan sampling; shell, Monitor, dan widget tidak memindai metrik yang sama secara independen. Error provider harus menjadi state lokal, bukan menjatuhkan shell.
+
+Rancangan desktop memisahkan shell yang hidup selama sesi dari **Const Hub**, aplikasi Settings yang dibuka sesuai kebutuhan. Quick Settings dan Hub memakai provider yang sama. Dock aplikasi dan Island menjadi surface terpisah dengan konfigurasi independen. Launcher dan pintasan sesi tetap berfungsi tanpa keduanya. Cutover setiap surface menjaga satu pemilik fokus, input mask, dan reservasi per tepi/output.
 
 Arah visual dan kontrak interaksi tema ada di [design.md](../design.md); pemilih aksen dan generator palet belum diimplementasikan. Targetnya satu pemilik preferensi Appearance dan satu hasil generasi token per sesi, bukan ekstraktor wallpaper terpisah pada tiap widget/toolkit. Default token vendor dimiliki paket desktop; pilihan mode Default/Manual/Wallpaper dan wallpaper sumber disimpan per pengguna. Settings meminta preview/apply/cancel pada pemilik state yang sama; adapter toolkit melaporkan penerapan atau kegagalan aktual. Token turunan adalah hasil generasi, bukan sumber preferensi kedua. Versi schema, algoritme, path, dan transport konkret ditetapkan saat implementasi.
 
 Ekstraksi wallpaper berjalan lokal sebagai user biasa; kegagalan mempertahankan palet terakhir yang valid dengan status error. Boot/initramfs dan greeter memakai ekspor vendor statis tanpa membaca wallpaper atau home pengguna. Tema adaptif tidak memberikan izin capture maupun computer use dan tidak memperluas akses berkas ke pengguna lain.
 
 Widget bawaan memiliki ID jenis/instance, schema preferensi, sumber data, aksi terbatas, dan lifecycle. Layout per-user dimigrasikan ketika upgrade atau output berubah. Plugin pihak ketiga tidak termasuk dukungan 1.0 sebelum model izin/kompatibilitas/isolasinya ditetapkan. Aksesibilitas QML, fokus, dan keyboard diuji sebelum toolkit dikunci.
+
+Foot menjadi terminal awal. Hub dirancang menulis override tampilan Foot per pengguna dengan pemisahan dari default paket dan konfigurasi login shell. Saat beralih dari konfigurasi `/etc/skel` yang sudah tersalin, migrasi perlu mempertahankan edit pengguna dan membuat cadangan sebelum mengganti bagian yang dikelola.
 
 Aset dipasang oleh paket yang memakainya. `assets/manifest.json` mencatat asal logo, master, ekspor, penggunaan, paket pemilik, serta audit izin yang belum selesai. `constos-desktop` memasang SVG branding dan ikon `constos` hicolor melalui `iso/install-boot.sh`; GRUB/Plymouth menerima ekspor PNG yang sama, SDDM memakai SVG. Staging installer mengambil simbol putih/hitam dan ikon dari sumber yang sama. `packages/build-local.sh` menyertakan `assets/` pada fingerprint sumber agar artefak branding lama ditolak. Build menggunakan ekspor yang dikomit dan tidak memanggil renderer atau layanan generasi gambar. Preferensi tema/wallpaper pengguna terpisah dari default vendor; cakupan aset lain tetap mengikuti fase 06 roadmap.
 
