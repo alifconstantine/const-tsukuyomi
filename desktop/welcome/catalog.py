@@ -4,10 +4,10 @@ import subprocess
 
 
 APPS = {
-    "org.libreoffice.LibreOffice": ("LibreOffice", "Dokumen, spreadsheet, dan presentasi"),
-    "org.videolan.VLC": ("VLC", "Putar video dan audio"),
-    "org.localsend.localsend_app": ("LocalSend", "Kirim file lewat jaringan lokal"),
-    "org.keepassxc.KeePassXC": ("KeePassXC", "Simpan kata sandi secara lokal"),
+    "org.libreoffice.LibreOffice": ("LibreOffice", "Documents, spreadsheets, and presentations"),
+    "org.videolan.VLC": ("VLC", "Play video and audio"),
+    "org.localsend.localsend_app": ("LocalSend", "Share files over the local network"),
+    "org.keepassxc.KeePassXC": ("KeePassXC", "Store passwords locally"),
 }
 FLATHUB_URL = "https://dl.flathub.org/repo"
 FLATHUB_DESCRIPTOR = "/usr/share/flatpak/remotes.d/flathub.flatpakrepo"
@@ -34,7 +34,7 @@ def flatpak(*args, timeout=30):
     )
     if result.returncode != 0:
         detail = (result.stderr.strip() or result.stdout.strip()).splitlines()
-        raise RuntimeError(detail[-1][-400:] if detail else "Flatpak mengembalikan kegagalan.")
+        raise RuntimeError(detail[-1][-400:] if detail else "Flatpak returned an error.")
     return result.stdout
 
 
@@ -50,19 +50,19 @@ def flathub_remote():
             url = fields[1] if len(fields) > 1 else ""
             options = fields[2].strip().split(",") if len(fields) == 3 else []
             if url.rstrip("/") != FLATHUB_URL or {"disabled", "no-gpg-verify"}.intersection(options):
-                raise RuntimeError("Remote Flathub akun ini tidak aktif atau konfigurasinya tidak cocok.")
+                raise RuntimeError("The Flathub remote for this account is disabled or has an unexpected configuration.")
             return True
     return False
 
 
 def install_app(app_id):
     if app_id not in APPS:
-        raise ValueError("Aplikasi tidak ada di katalog ConstOS.")
+        raise ValueError("This app is not in the ConstOS catalog.")
     if not flathub_remote():
         flatpak("remote-add", "--user", "--if-not-exists", "flathub", FLATHUB_DESCRIPTOR)
         if not flathub_remote():
-            raise RuntimeError("Remote Flathub belum tersedia untuk akun ini.")
+            raise RuntimeError("The Flathub remote is unavailable for this account.")
     ref = f"app/{app_id}/x86_64/stable"
     flatpak("install", "--user", "--noninteractive", "--assumeyes", "flathub", ref, timeout=1800)
     if flatpak("info", "--user", "--arch=x86_64", "--show-ref", app_id, "stable").strip() != ref:
-        raise RuntimeError("Flatpak belum mengonfirmasi aplikasi yang dipasang.")
+        raise RuntimeError("Flatpak did not confirm the installed app.")

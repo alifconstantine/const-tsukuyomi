@@ -32,8 +32,7 @@
     },
     {
       "type": "wm",
-      "key": "Compositor",
-      "format": "Hyprland (Wayland)"
+      "key": "Compositor"
     },
     {
       "type": "terminal",

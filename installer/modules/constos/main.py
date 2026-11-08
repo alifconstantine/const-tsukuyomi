@@ -6,11 +6,11 @@ import libcalamares
 
 def pretty_name():
     phase = libcalamares.job.configuration.get('phase')
-    return {'preflight': 'Memeriksa disk, waktu, keyring dan mengunduh paket bertanda tangan',
-            'storage': 'Membuat GPT, ESP dan subvolume Btrfs pada disk yang dikonfirmasi',
-            'bootstrap': 'Memasang paket target ConstOS (bukan menyalin sistem live)',
-            'finalize': 'Mengonfigurasi layanan, Snapper, initramfs dan GRUB UEFI',
-            'unmount': 'Melepas filesystem target'}.get(phase, 'ConstOS')
+    return {'preflight': 'Checking the disk, clock, and keyrings and downloading signed packages',
+            'storage': 'Creating GPT, the EFI system partition, and Btrfs subvolumes',
+            'bootstrap': 'Installing packages on the target disk',
+            'finalize': 'Configuring services, Snapper, initramfs, and UEFI GRUB',
+            'unmount': 'Unmounting the target filesystems'}.get(phase, 'ConstOS')
 
 
 def run():
@@ -30,8 +30,8 @@ def run():
         elif phase == 'unmount':
             backend.unmount()
         else:
-            raise RuntimeError('Fase installer tidak dikenal.')
+            raise RuntimeError('Unknown installation step.')
         return None
     except Exception as error:
         # Jangan serialisasi globalstorage: password akun dimiliki users upstream.
-        return ('Instalasi ConstOS dihentikan', str(error))
+        return ('ConstOS installation stopped', str(error))

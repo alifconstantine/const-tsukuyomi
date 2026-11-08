@@ -69,8 +69,7 @@ install -m 0644 -- "$repo_dir/assets/exports/const-logo-boot.png" "$profile/grub
 root="$profile/airootfs"
 install -m 0644 -- "$profile/pacman.conf" "$root/etc/pacman.conf"
 
-# Kedua profil memakai sumber desktop/boot yang sama, bukan salinan konfigurasi.
-bash "$repo_dir/desktop/install.sh" "$root" live
+# ISO memuat sesi installer. Paket constos-desktop memasang Hyprland pada target.
 bash "$iso_dir/install-boot.sh" "$root" live
 bash "$repo_dir/installer/install.sh" "$root"
 

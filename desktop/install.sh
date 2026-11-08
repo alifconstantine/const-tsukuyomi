@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Install only into a caller-owned staging/package prefix, never the host HOME.
 set -euo pipefail
-if [[ $# != 2 || -z $1 || $1 == / || ( $2 != live && $2 != installed ) ]]; then
-    printf 'Usage: desktop/install.sh ROOT live|installed\n' >&2
+if [[ $# != 1 || -z $1 || $1 == / ]]; then
+    printf 'Usage: desktop/install.sh ROOT\n' >&2
     exit 2
 fi
 source_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
@@ -32,13 +32,11 @@ install -Dm644 -- "$source_dir/portal/hyprland-portals.conf" "$root/etc/xdg/xdg-
 install -Dm644 -- "$source_dir/schemas/90_constos.gschema.override" "$root/usr/share/glib-2.0/schemas/90_constos.gschema.override"
 install -Dm644 -- "$source_dir/pacman-hooks/31-constos-glib-schemas.hook" "$root/usr/share/libalpm/hooks/31-constos-glib-schemas.hook"
 
-if [[ $2 == installed ]]; then
-    welcome="$source_dir/welcome"
-    install -Dm755 -- "$welcome/welcome.py" "$root/usr/lib/constos/welcome/welcome.py"
-    install -Dm644 -- "$welcome/catalog.py" "$root/usr/lib/constos/welcome/catalog.py"
-    for entry in "$welcome/"*.desktop; do
-        install -Dm644 -- "$entry" "$root/usr/share/applications/${entry##*/}"
-    done
-    install -Dm644 -- "$welcome/constos-welcome.service" "$root/usr/lib/systemd/user/constos-welcome.service"
-    install -Dm644 -- "$welcome/10-welcome.conf" "$root/usr/lib/systemd/user/constos-session.target.d/10-welcome.conf"
-fi
+welcome="$source_dir/welcome"
+install -Dm755 -- "$welcome/welcome.py" "$root/usr/lib/constos/welcome/welcome.py"
+install -Dm644 -- "$welcome/catalog.py" "$root/usr/lib/constos/welcome/catalog.py"
+for entry in "$welcome/"*.desktop; do
+    install -Dm644 -- "$entry" "$root/usr/share/applications/${entry##*/}"
+done
+install -Dm644 -- "$welcome/constos-welcome.service" "$root/usr/lib/systemd/user/constos-welcome.service"
+install -Dm644 -- "$welcome/10-welcome.conf" "$root/usr/lib/systemd/user/constos-session.target.d/10-welcome.conf"

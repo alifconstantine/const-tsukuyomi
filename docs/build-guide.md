@@ -1,6 +1,6 @@
 # Build dan uji ConstOS Live
 
-Profil awal menargetkan **x86_64 UEFI** dengan GRUB, kernel CachyOS BORE, dan Hyprland. Gunakan VM dengan Secure Boot dimatikan. Sumber tema boot/login, desktop live, serta installer online disiapkan untuk diuji bersama. Keberadaan konfigurasi bukan bukti instalasi/recovery lulus; ikuti [pengujian terpadu](acceptance-guide.md) dan status di roadmap. Harness tidak diperlukan.
+Profil menargetkan **x86_64 UEFI** dengan GRUB dan kernel CachyOS BORE. ISO membuka Calamares di Cage, sedangkan target terpasang memakai Hyprland. Gunakan VM dengan Secure Boot dimatikan. Untuk membuktikan instalasi dan recovery, ikuti [pengujian terpadu](acceptance-guide.md) dan status di roadmap.
 
 ## Siapkan host build
 
@@ -36,7 +36,7 @@ bash iso/buildiso.sh --stage-only --packages-dir "$packages" --calamares-dir "$c
 sudo bash iso/buildiso.sh --packages-dir "$packages" --calamares-dir "$calamares" -v
 ```
 
-Staging menyalin profil Archiso dan memanggil `desktop/install.sh ROOT live`, `iso/install-boot.sh ROOT live`, serta `installer/install.sh`. Desktop diletakkan di `/etc/skel/.config` untuk akun live; tema dan launcher dipasang pada path sistem. Dua paket target dan checksum disertakan di `/usr/share/constos/packages`. Paket `constos-desktop` memakai mode `installed` untuk memasang Welcome dan katalog. Paket `constos-calamares` masuk repo lokal **khusus mkarchiso**, bukan konfigurasi pacman live atau target. `SHA256SUMS` memeriksa arsip dan `SOURCE_SHA256SUMS` mencocokkan sumber masing-masing builder dengan checkout. Kepercayaan tanpa signature hanya berlaku untuk repo lokal hasil build tersebut; signature repo jaringan tetap diwajibkan. Setiap run memakai direktori kerja baru di `iso/work/`. `-w DIR`, `-o DIR`, `--packages-dir DIR`, dan `--calamares-dir DIR` mengubah lokasi kerja, output, serta input paket. ISO muncul di `iso/out/constos-*.iso` secara default. `makepkg` tidak dijalankan sebagai root.
+Staging ISO memanggil `iso/install-boot.sh ROOT live` dan `installer/install.sh ROOT` untuk tema, Calamares, serta sesi Cage yang dipilih SDDM. Paket target `constos-desktop` memanggil `desktop/install.sh ROOT` untuk Hyprland, Welcome, dan Recommended Apps. Dua paket target dan checksum disertakan di `/usr/share/constos/packages`. Paket `constos-calamares` masuk repo lokal khusus mkarchiso. `SHA256SUMS` memeriksa arsip dan `SOURCE_SHA256SUMS` mencocokkan sumber builder dengan checkout. Signature repo jaringan tetap diwajibkan. Setiap run memakai direktori kerja baru di `iso/work/`. `-w DIR`, `-o DIR`, `--packages-dir DIR`, dan `--calamares-dir DIR` mengubah lokasi kerja, output, serta input paket. ISO muncul di `iso/out/constos-*.iso` secara default. Jalankan `makepkg` sebagai pengguna biasa.
 
 `constos-core` mengompilasi CLI `const` untuk x86_64 generik dengan `Cargo.lock`, termasuk saat host memakai flag CPU native. Build memerlukan `cargo`, `rustc`, dan dependensi Cargo yang sudah ada di cache atau dapat diunduh. Fingerprint paket lokal mencakup workspace Rust dan lockfile.
 
@@ -92,12 +92,11 @@ Path firmware mengikuti [paket Arch edk2-ovmf](https://archlinux.org/packages/ex
 | Jalur | Bukti yang diperiksa |
 | --- | --- |
 | Build Linux | SHA checkout bersih sebelum/sesudah build, checksum paket lokal dan sumbernya, seluruh symlink overlay yang terlacak tetap symlink saat staging, versi paket host, log Archiso, satu ISO beserta SHA-256. |
-| Instal ConstOS | Biarkan default GRUB berjalan sampai dialog installer melaporkan tidak ada disk kosong. VM smoke hanya membawa ISO dan firmware. |
-| Coba ConstOS | UEFI dan kernel BORE, identitas ConstOS, akun `liveuser` non-root, symlink systemd, nol unit gagal, SDDM aktif, sesi Wayland aktual, Waybar terpetakan, serta pemeriksaan bahwa installer tidak terbuka otomatis. `Super+Enter`, `Super+Space`, dan `Super+E` membuka Foot, Wofi, dan Thunar. |
+| Install ConstOS | VM smoke hanya membawa ISO dan firmware. Timeout GRUB membuka dialog berbahasa Inggris yang menjelaskan disk kosong tidak tersedia. Esc membuka layar tindakan installer. Periksa screenshot untuk memastikan tidak ada desktop atau panel di belakangnya. |
 | Jaringan/ZRAM | NetworkManager aktif, IPv4 dan lease DHCP pada interface non-loopback, serta perangkat ZRAM aktif sebagai swap dengan algoritme `zstd`. Ini bukan uji internet atau Wi-Fi fisik. |
-| Diagnostics | Cold boot entri terakhir dengan `systemd.unit=multi-user.target`, SDDM tidak aktif, controlling terminal `/dev/tty1`, dan `sudo -n journalctl -b` membaca entri dengan boot ID yang sesuai. |
+| Diagnostics | Cold boot entri terakhir dengan `systemd.unit=multi-user.target`, SDDM tidak aktif, controlling terminal `/dev/tty1`, dan `sudo -n journalctl -b` membaca entri dengan boot ID yang sesuai. Probe juga memeriksa kernel, symlink systemd, paket Cage, sesi installer, dan `calamares --version` dengan Qt offscreen. |
 
-`build.json`, `build.log`, `staging.log`, `host-packages.txt`, checksum, dan ISO berada di direktori build. Direktori smoke menyimpan `summary.json`, report desktop dan console, perintah/versi QEMU, hash firmware dan runner/probe, screenshot GRUB/dialog installer/desktop/launcher/Thunar/TTY, serta log kegagalan. Exit nonzero atau `ok: false` memblokir penerimaan. Output yang ada tidak dihapus untuk mencoba ulang; pilih direktori baru.
+`build.json`, `build.log`, `staging.log`, `host-packages.txt`, checksum, dan ISO berada di direktori build. Direktori smoke menyimpan `summary.json`, report konsol, perintah/versi QEMU, hash firmware dan runner/probe, screenshot GRUB/dialog installer/layar tindakan/TTY, serta log kegagalan. Exit nonzero atau `ok: false` memblokir penerimaan. Pilih direktori baru untuk setiap percobaan.
 
 Untuk menguji ISO yang sudah ada, jalankan runner tanpa `--build-evidence`; hasilnya mencatat checksum tetapi **tidak mengklaim SHA sumber build**. Jika metadata diberikan, nama/checksum ISO, keberhasilan build, dan identitas checkout bersih harus cocok sebelum VM dijalankan.
 
@@ -111,7 +110,7 @@ Isi repository variables `CONSTOS_OVMF_CODE` dan `CONSTOS_OVMF_VARS` dengan path
 
 ## Pemeriksaan manual tambahan
 
-Untuk diagnosis interaktif, boot ISO dengan profil VM yang sama. Periksa tiga entri GRUB, tiga shortcut di atas, `uname -r`, `systemctl --failed`, `nmcli general status`, `zramctl`, serta `journalctl -b` dari Diagnostics. Gunakan skenario fase 02 roadmap untuk audio, file/MIME, lock/logout, screenshot, dan portal; kelulusan runner tidak menggantikan skenario tersebut.
+Untuk diagnosis interaktif, boot **ConstOS Diagnostics** dengan profil VM yang sama. Periksa `uname -r`, `systemctl --failed`, `nmcli general status`, `zramctl`, serta `journalctl -b`. Jalankan skenario shortcut, audio, file/MIME, lock/logout, screenshot, dan portal pada desktop yang sudah terpasang.
 
 Regresi batas disk, arsip preflight, dan backend katalog dapat dijalankan sebagai pengguna biasa tanpa disk uji.
 
@@ -120,7 +119,7 @@ python3 -m unittest discover -s tests/installer -p 'test_*.py'
 python3 -m unittest discover -s tests/desktop -p 'test_*.py'
 ```
 
-Tes ini bukan bukti instalasi penuh. Runner Live UEFI sekarang juga memanggil `calamares --version` pada sesi desktop untuk mendeteksi binary/library gagal sebelum menerima ISO; kelulusan runner lama sebelum gate ini ditambahkan tidak membuktikan installer siap.
+Gunakan VM dengan disk virtual kosong terpisah untuk membuktikan wizard, penulisan disk, reboot, dan login. Smoke tanpa disk menguji jalur boot dan penolakan awal.
 
 ## Pengujian terpadu dan recovery tema
 

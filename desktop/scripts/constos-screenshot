@@ -4,7 +4,7 @@ set -euo pipefail
 umask 077
 fail() {
     printf 'ConstOS screenshot: %s\n' "$1" >&2
-    notify-send --app-name='ConstOS Screenshot' --urgency=critical 'Screenshot gagal' "$1" || true
+    notify-send --app-name='ConstOS Screenshot' --urgency=critical 'Screenshot failed' "$1" || true
     exit 1
 }
 case "${1:-region}" in
@@ -12,10 +12,10 @@ case "${1:-region}" in
     *) printf 'Usage: constos-screenshot [region|screen]\n' >&2; exit 2 ;;
 esac
 [[ $# -le 1 ]] || { printf 'Usage: constos-screenshot [region|screen]\n' >&2; exit 2; }
-[[ -n ${WAYLAND_DISPLAY:-} && -n ${XDG_RUNTIME_DIR:-} ]] || fail 'Sesi Wayland tidak tersedia.'
+[[ -n ${WAYLAND_DISPLAY:-} && -n ${XDG_RUNTIME_DIR:-} ]] || fail 'The Wayland session is unavailable.'
 exec 9>"$XDG_RUNTIME_DIR/constos-screenshot.lock"
 flock -n 9 || exit 0
-capture=$(mktemp -d "$XDG_RUNTIME_DIR/constos-screenshot.XXXXXX") || fail 'Tidak dapat membuat berkas sementara.'
+capture=$(mktemp -d "$XDG_RUNTIME_DIR/constos-screenshot.XXXXXX") || fail 'Could not create a temporary directory.'
 trap 'rm -rf -- "$capture"' EXIT
 geometry=()
 if [[ $mode == region ]]; then
@@ -24,16 +24,16 @@ if [[ $mode == region ]]; then
     if (( result != 0 )); then
         # slurp 1.5 melaporkan Escape/klik kanan dengan pesan ini dan status 1.
         if (( result == 1 )) && [[ ! -s $capture/error || $(cat "$capture/error") == "selection cancelled" ]]; then exit 0; fi
-        fail "Pemilihan area gagal: $(cat "$capture/error")"
+        fail "Area selection failed: $(cat "$capture/error")"
     fi
     [[ -n $region ]] || exit 0
     geometry=(-g "$region")
 fi
 if ! grim "${geometry[@]}" "$capture/image.png" 2>"$capture/error"; then
-    fail "Pengambilan gambar gagal: $(cat "$capture/error")"
+    fail "Capture failed: $(cat "$capture/error")"
 fi
-[[ -s $capture/image.png ]] || fail 'Pengambilan gambar menghasilkan berkas kosong.'
+[[ -s $capture/image.png ]] || fail 'The capture produced an empty image.'
 if ! wl-copy --type image/png <"$capture/image.png" >/dev/null 2>"$capture/error" 9>&-; then
-    fail "Clipboard gagal: $(cat "$capture/error")"
+    fail "Clipboard copy failed: $(cat "$capture/error")"
 fi
-notify-send --app-name='ConstOS Screenshot' 'Screenshot disalin' 'Gambar tersedia di clipboard.' || true
+notify-send --app-name='ConstOS Screenshot' 'Screenshot copied' 'The image is available on the clipboard.' || true

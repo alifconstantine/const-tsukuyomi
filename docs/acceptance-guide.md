@@ -1,12 +1,12 @@
 # Pengujian terpadu boot, desktop, dan instalasi
 
-Panduan ini mencakup integrasi GRUB, Plymouth, SDDM, desktop live, serta installer UEFI pada disk kosong. Daftar skenario adalah pekerjaan pengujian, bukan pernyataan kelulusan. Build dan smoke otomatis mengikuti [panduan build](build-guide.md); status serta bukti aktual dicatat di [roadmap](../implementation_plan.md).
+Panduan ini mencakup GRUB, Plymouth, sesi installer Cage, dan desktop Hyprland terpasang pada UEFI. Skenario menjelaskan hasil yang harus dibuktikan. Build dan smoke otomatis mengikuti [panduan build](build-guide.md), sedangkan hasil aktual dicatat di [roadmap](../implementation_plan.md).
 
 ## Siapkan build dan disk uji
 
 Gunakan ISO baru dari sumber yang diuji. Catat checksum, identitas sumber, versi paket, firmware, CPU/RAM VM, waktu, serta direktori bukti. ISO lama yang pernah boot tidak membuktikan perubahan tema atau installer baru. Jangan menguji installer pada disk host atau disk berisi data.
 
-Smoke otomatis menguji tiga entri GRUB pada VM tanpa disk target. Untuk pengujian installer manual, buat VM terpisah dengan **satu disk virtual baru**, minimal 32 GiB, RAM awal 8 GiB atau lebih, 4 vCPU, UEFI non-Secure-Boot, dan koneksi internet. Cache unduhan paket menggunakan ruang sesi live; pemeriksaan installer harus gagal sebelum partisi jika sumber daya tidak cukup.
+Smoke otomatis menguji dua entri GRUB pada VM tanpa disk target. Untuk pengujian installer manual, buat VM terpisah dengan **satu disk virtual baru**, minimal 32 GiB, RAM awal 8 GiB atau lebih, 4 vCPU, UEFI non-Secure-Boot, dan koneksi internet. Cache unduhan paket menggunakan ruang sesi live. Pemeriksaan installer harus gagal sebelum partisi jika sumber daya tidak cukup.
 
 Contoh berikut dijalankan sebagai user biasa di host Linux yang sudah memenuhi prasyarat QEMU/OVMF. Sesuaikan path ISO dan firmware sesuai host. Direktori run harus baru; image/NVRAM lama tidak ditimpa.
 
@@ -40,28 +40,27 @@ Di guest, periksa `lsblk -d -o NAME,SIZE,MODEL,SERIAL,WWN`. Disk target harus co
 | GRUB teks | Lewat console GRUB, `unset theme` lalu `terminal_output console`; kembali ke menu dan buktikan entri boot tetap bisa dipakai tanpa tema |
 | Diagnostics | Cold boot entri console; desktop tidak dimulai, `journalctl -b` dapat dibaca dari TTY |
 | Plymouth | Logo/progres terlihat, Escape membuka log, boot tetap maju; kegagalan grafis tidak memutus jalur teks |
-| Desktop live | Autologin hanya akun live, panel/launcher/notifikasi tidak ganda; Super+Enter, Super+Space, Super+E membuka aplikasi yang benar |
-| SDDM | Buka **Opsi masuk** untuk memilih pengguna, sesi, dan tata letak keyboard. Uji fokus Tab, Enter, dan menu daya. Dengan beberapa akun tanpa riwayat, pilih akun secara eksplisit. Uji juga jalur tanpa sesi terdaftar |
+| Installer live | **Install ConstOS** membuka pemilihan disk dalam sesi Cage tanpa panel atau launcher desktop. Teks pertama tampil dalam bahasa Inggris. Uji Tab, Enter, Esc, dan pemilihan ulang setelah batal atau gagal |
+| SDDM | Buka **Sign-in options** untuk memilih pengguna, sesi, dan tata letak keyboard. Uji fokus Tab, Enter, dan menu daya. Dengan beberapa akun tanpa riwayat, pilih akun secara eksplisit. Uji juga jalur tanpa sesi terdaftar |
 | Login target | Pada boot pertama dengan satu akun baru, pastikan nama akun tampil dan fokus berada di kata sandi. Enter mengirim login ke SDDM, kata sandi salah menampilkan error dan fokus kembali ke kolom, kata sandi benar membuka sesi ConstOS. Login ulang memakai akun terakhir yang masih tersedia |
 | Recovery greeter | Pilih tema stock lewat konfigurasi di TTY sesuai panduan build, restart SDDM, dan pastikan login masih tersedia |
 
 Simpan screenshot setiap tahap yang benar-benar terlihat. Live autologin dapat melewati greeter saat boot; itu bukan bukti tampilan greeter sudah diperiksa. Jangan menguji password atau sesi pribadi pada screenshot yang akan dibagikan.
 
-Biarkan timeout GRUB memilih **Instal ConstOS** dan periksa installer terbuka sekali. Uji **Batal** tanpa perubahan disk, **Coba ConstOS** tanpa wizard otomatis, serta **Diagnostics** ke TTY. Lanjutkan jalur utama sampai reboot tanpa ISO dan login di target.
+Biarkan timeout GRUB memilih **Install ConstOS**. Batalkan pemilihan disk dan konfirmasi secara terpisah, lalu pastikan layar tindakan menawarkan **Open installer**, **Restart**, dan **Shut down**. Jalankan **Open installer** untuk memulai ulang. Pada cold boot lain, pilih **ConstOS Diagnostics** dan periksa TTY. Lanjutkan jalur utama sampai reboot tanpa ISO dan login di target.
 
-## Selamat Datang dan Aplikasi Pilihan
+## Welcome dan Recommended Apps
 
 | Skenario | Hasil yang harus diamati |
 | --- | --- |
-| Login pertama | Setelah login ke disk terpasang, Selamat Datang terbuka satu kali. Cek fokus dan Tab, cocokkan tiga pintasan dengan aksi, lalu tekan **Selesai** atau **Lewati**. |
-| Login berikutnya | Keluar dan masuk kembali. Welcome tidak muncul otomatis. Cari **Selamat Datang** dan **Aplikasi Pilihan** di Wofi. Uji kedua entri ketika salah satunya sudah terbuka, lalu uji akun kedua yang belum pernah melihat Welcome. |
-| Live | Dari **Coba ConstOS**, launcher installer tetap tersedia. Selamat Datang dan katalog target tidak ada di menu. |
-| Pemasangan | Buka katalog, klik **Pasang** pada satu aplikasi, amati status selama transaksi, lalu cocokkan **Terpasang** dengan `flatpak info --user ID_APLIKASI`. Buka aplikasi dari Wofi dan verifikasi aplikasi tetap tersedia setelah login ulang. |
+| Login pertama | Setelah login ke disk terpasang, **Welcome** terbuka satu kali. Cek fokus dan Tab, cocokkan tiga pintasan dengan aksi, lalu tekan **Done** atau **Skip**. |
+| Login berikutnya | Keluar dan masuk kembali. Welcome tidak muncul otomatis. Cari **Welcome** dan **Recommended Apps** di Wofi. Uji kedua entri ketika salah satunya sudah terbuka, lalu uji akun kedua yang belum pernah melihat Welcome. |
+| Pemasangan | Buka katalog, klik **Install** pada satu aplikasi, amati status selama transaksi, lalu cocokkan **Installed** dengan `flatpak info --user ID_APLIKASI`. Buka aplikasi dari Wofi dan verifikasi aplikasi tetap tersedia setelah login ulang. |
 | Kegagalan | Uji tanpa jaringan dan dengan remote bernama sama yang salah pada akun uji terpisah. Pastikan tidak ada status sukses, remote lama tetap utuh, dan percobaan ulang setelah kondisi dipulihkan berhasil. |
 
-## Desktop live dan desktop terpasang
+## Desktop terpasang
 
-Ulangi skenario berikut pada kedua lingkungan. Gunakan fixture lokal nonpribadi untuk teks, gambar, PDF, dan arsip.
+Uji skenario berikut setelah reboot dari disk. Gunakan fixture lokal nonpribadi untuk teks, gambar, PDF, dan arsip.
 
 | Bagian | Skenario dan bukti |
 | --- | --- |
@@ -98,9 +97,9 @@ Output bersih atau interface tersedia tidak menggantikan aksi pengguna pada tabe
 
 ## Installer dan reboot tanpa ISO
 
-Sebelum mencoba wizard, jalankan `calamares --version` dan `pacman -Q constos-calamares boost-libs python` di sesi live. Paket lokal `constos-calamares 3.4.1-1` dibangun terhadap Boost 1.92 dan Python 3.14 pada ABI repo saat ini. Kesalahan loader/library adalah kegagalan prasyarat, bukan alasan menghapus keyring, mengubah symlink library, atau melewati preflight. Launcher memeriksa binary sebelum meminta konfirmasi disk. Log runtime ditulis ke `/run/constos-installer/calamares.log` dan `/run/constos-installer/pacman.log`.
+Gunakan **ConstOS Diagnostics** untuk memeriksa `QT_QPA_PLATFORM=offscreen calamares --version` dan `pacman -Q constos-calamares boost-libs python` dari TTY. Paket lokal `constos-calamares 3.4.1-1` dibangun terhadap Boost 1.92 dan Python 3.14 pada baseline yang tercatat. Launcher memeriksa binary sebelum meminta konfirmasi disk. Log runtime ditulis ke `/run/constos-installer/calamares.log` dan `/run/constos-installer/pacman.log`.
 
-1. Jalankan **Install ConstOS** dari launcher. Batalkan satu kali sebelum konfirmasi disk; tidak boleh ada perubahan partisi atau pemasangan target.
+1. Boot **Install ConstOS** dari GRUB. Batalkan satu kali sebelum konfirmasi disk dan periksa bahwa partisi tetap utuh, lalu pilih **Open installer**.
 2. Periksa mode UEFI, jaringan, waktu tersinkronisasi, keyring, sumber paket, ruang cache, serta paket lokal. Pada VM terpisah, uji jaringan/mirror gagal sebelum preflight; lalu uji putus jaringan setelah preflight selesai. Pemasangan sesudah partisi harus memakai arsip transaksi terverifikasi tanpa sinkronisasi/unduhan repo baru.
 3. Pilih disk kosong yang identitasnya sudah dicocokkan. Konfirmasi harus memperlihatkan path, kapasitas, dan identitas perangkat; jangan hanya mencocokkan ukuran. Disk berpartisi, bermount, atau memiliki signature harus ditolak pada jalur awal ini.
 4. Ikuti locale, keyboard, akun baru, dan summary. Periksa bahwa password tidak muncul pada summary atau log. Jalankan instalasi dan catat setiap error; halaman selesai hanya boleh muncul setelah seluruh backend berhasil.

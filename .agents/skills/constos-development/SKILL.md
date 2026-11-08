@@ -12,7 +12,7 @@ Path kode di bawah relatif terhadap root repositori. Baca [AGENTS.md](../../../A
 ## 1. Tentukan jalur efektif
 
 - Untuk ISO, buka `iso/buildiso.sh`, profil, manifest, dan overlay yang terdampak. Cocokkan file sumber dengan hasil staging; jangan mengedit `iso/work/` atau `iso/out/` sebagai perbaikan permanen.
-- Untuk desktop live/target, ikuti `desktop/install.sh ROOT live|installed` dan sesi `constos.desktop` → `constos-session`. Entry Hyprland efektif adalah `desktop/hypr/hyprland.lua`; layanan user dimulai setelah environment compositor diimpor. Periksa drop-in sesi masing-masing profil sebelum menambah autostart.
+- Untuk sesi ISO, ikuti `installer/install.sh ROOT`, autologin SDDM khusus live, dan `installer/session/constos-installer.desktop` yang membuka Cage. Untuk desktop target, ikuti `desktop/install.sh ROOT` serta sesi `constos.desktop` → `constos-session` dengan `desktop/hypr/hyprland.lua`.
 - Untuk boot/login, ikuti `iso/install-boot.sh ROOT live|installed` dan sumber `desktop/boot/`. Hook/preset Archiso serta autologin hanya untuk mode live; target memakai preset terpasang.
 - Untuk identitas logo, ubah master `assets/const-logo.svg`, lalu regenerasikan ekspor sesuai [panduan build](../../../docs/build-guide.md#ekspor-logo). Periksa `assets/manifest.json`, `iso/install-boot.sh`, staging GRUB, dan `installer/install.sh`; jangan menambah salinan master atau mengasumsikan izin redistribusi raster sumber.
 - Untuk installed target, ikuti `installer/install.sh`, manifest target, backend Calamares, serta paket `constos-core`/`constos-desktop`. Bangun paket lewat `packages/build-local.sh` sebagai user biasa sebelum build root; cocokkan checksum artefak dan sumbernya sesuai panduan build. Jangan menyalin seluruh overlay live ke disk.
@@ -26,7 +26,7 @@ Path kode di bawah relatif terhadap root repositori. Baca [AGENTS.md](../../../A
 | --- | --- |
 | Markdown saja | Tautan lokal/anchor, code fence, referensi lama, kesesuaian status/rencana, dan dampak dokumen menurut AGENTS.md. Tidak memerlukan build ISO. |
 | Shell build/staging | Pemeriksaan sintaks shell yang diubah, jalankan staging, lalu periksa file/permission/symlink yang terdampak. Staging bukan bukti boot. |
-| Manifest, kernel, initramfs, boot, atau service live | Build tercatat dan runner `tests/live/uefi_smoke.py` sesuai panduan build; periksa screenshot tiga entri GRUB dan jalur yang berubah. Tambahkan pengujian hardware untuk klaim di luar VM. |
+| Manifest, kernel, initramfs, boot, atau service live | Build tercatat dan runner `tests/live/uefi_smoke.py` sesuai panduan build; periksa dua entri GRUB, layar installer, dan jalur diagnostik. Tambahkan pengujian hardware untuk klaim di luar VM. |
 | UI, keybind, tema, widget, atau portal | Interaksi pada sesi Wayland target: fokus/keyboard, aksi nyata, cancel/error, dan monitor/scale yang relevan. Screenshot hasil render harus cocok dengan build yang diuji. |
 | Screenshot atau recorder | Jalankan alur pengguna, periksa isi clipboard/hasil gambar, buka serta putar rekaman video/audio. Uji sumber, Stop/cancel/denied, dan kasus lifecycle/failure yang diubah sesuai fase 07A. |
 | Installer, storage, update, atau recovery | Gunakan disk VM uji, instalasi/reboot tanpa ISO, periksa target, lalu jalankan update/recovery yang diubah. Pastikan identitas disk sebelum operasi destruktif. |

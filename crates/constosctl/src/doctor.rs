@@ -17,17 +17,17 @@ type Check = (Status, String);
 fn check_kernel(collector: &Collector) -> Check {
     let cpu = collector.collect_cpu();
     if cpu.kernel_release.is_empty() {
-        return (Status::Unknown, "Versi kernel tidak terbaca".into());
+        return (Status::Unknown, "Could not read the kernel version".into());
     }
     if cpu.bore_detected {
         return (
             Status::Pass,
-            format!("Penanda BORE pada {}", cpu.kernel_release),
+            format!("BORE marker found in {}", cpu.kernel_release),
         );
     }
     (
         Status::Warn,
-        format!("Penanda BORE tidak ditemukan pada {}", cpu.kernel_release),
+        format!("BORE marker not found in {}", cpu.kernel_release),
     )
 }
 
@@ -37,13 +37,13 @@ fn check_zram(collector: &Collector) -> Check {
         Err(error) => {
             return (
                 Status::Unknown,
-                format!("Gagal membaca /proc/swaps ({error})"),
+                format!("Could not read /proc/swaps ({error})"),
             )
         }
     };
     let mut lines = swaps.lines();
     if lines.next().and_then(|line| line.split_whitespace().next()) != Some("Filename") {
-        return (Status::Unknown, "Format /proc/swaps tidak dikenali".into());
+        return (Status::Unknown, "Unrecognized /proc/swaps format".into());
     }
     let devices: Vec<_> = lines
         .filter_map(|line| line.split_whitespace().next())
@@ -56,7 +56,7 @@ fn check_zram(collector: &Collector) -> Check {
     if devices.is_empty() {
         return (
             Status::Fail,
-            "Tidak ada perangkat ZRAM aktif sebagai swap".into(),
+            "No ZRAM device is active as swap".into(),
         );
     }
     (Status::Pass, devices.join(", "))
@@ -79,14 +79,14 @@ fn check_systemd() -> Check {
         Err(error) => {
             return (
                 Status::Unknown,
-                format!("Gagal menjalankan systemctl ({error})"),
+                format!("Could not run systemctl ({error})"),
             )
         }
     };
     if !output.status.success() {
         return (
             Status::Unknown,
-            format!("systemctl gagal ({})", output.status),
+            format!("systemctl failed ({})", output.status),
         );
     }
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -95,27 +95,27 @@ fn check_systemd() -> Check {
         .filter_map(|line| line.split_whitespace().next())
         .collect();
     if units.is_empty() {
-        return (Status::Pass, "0 unit gagal".into());
+        return (Status::Pass, "No failed units".into());
     }
     (
         Status::Fail,
-        format!("{} unit gagal ({})", units.len(), units.join(", ")),
+        format!("Failed units: {} ({})", units.len(), units.join(", ")),
     )
 }
 
 fn check_snapper() -> Check {
     match fs::metadata("/etc/snapper/configs/root") {
         Ok(metadata) if metadata.is_file() => {
-            (Status::Pass, "Berkas konfigurasi root tersedia".into())
+            (Status::Pass, "Root configuration file is present".into())
         }
-        Ok(_) => (Status::Fail, "Path konfigurasi root bukan berkas".into()),
+        Ok(_) => (Status::Fail, "Root configuration path is not a file".into()),
         Err(error) if error.kind() == ErrorKind::NotFound => (
             Status::Fail,
-            "Berkas konfigurasi root tidak ditemukan".into(),
+            "Root configuration file not found".into(),
         ),
         Err(error) => (
             Status::Unknown,
-            format!("Konfigurasi root tidak bisa diperiksa ({error})"),
+            format!("Could not inspect the root configuration ({error})"),
         ),
     }
 }
@@ -125,8 +125,8 @@ pub fn run() -> i32 {
     let collector = Collector::default();
     let checks = [
         ("Kernel", check_kernel(&collector)),
-        ("Swap ZRAM", check_zram(&collector)),
-        ("Layanan systemd", check_systemd()),
+        ("ZRAM swap", check_zram(&collector)),
+        ("systemd services", check_systemd()),
         ("Snapper", check_snapper()),
     ];
     let mut exit_code = 0;

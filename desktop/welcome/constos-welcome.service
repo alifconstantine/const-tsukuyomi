@@ -1,5 +1,5 @@
 [Unit]
-Description=Selamat Datang ConstOS pada login pertama
+Description=ConstOS Welcome on first login
 PartOf=constos-session.target
 ConditionEnvironment=WAYLAND_DISPLAY
 

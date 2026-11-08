@@ -52,7 +52,7 @@ class ProbeServer(ThreadingHTTPServer):
 class ProbeHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         mode = self.server.mode
-        if mode not in ("desktop", "fallback") or self.path != f"/{self.server.token}/{mode}.py":
+        if mode != "fallback" or self.path != f"/{self.server.token}/{mode}.py":
             self.send_error(404)
             return
         header = f"REPORT_URL = {self.server.guest_url + '/report'!r}\nMODE = {mode!r}\n"
@@ -74,7 +74,7 @@ class ProbeHandler(BaseHTTPRequestHandler):
             report = json.loads(self.rfile.read(length))
             if not isinstance(report, dict) or report.get("mode") != self.server.mode:
                 raise ValueError("invalid report mode")
-            if report.get("stage") not in ("started", "baseline", "wofi", "thunar", "error"):
+            if report.get("stage") not in ("started", "baseline"):
                 raise ValueError("invalid report stage")
             if not isinstance(report.get("ok"), bool):
                 raise ValueError("invalid report status")
@@ -221,30 +221,29 @@ def read_screen(args, vm, name):
 def select_grub(args, vm, mode, deadline):
     while time.monotonic() < deadline:
         text = read_screen(args, vm, "boot")
-        if "instal constos" in text and "coba constos" in text and "console fallback" in text:
+        if "install constos" in text and "console fallback" in text:
             if mode != "installer":
                 vm.key("up")
             vm.screenshot("grub")
             if mode == "installer":
                 # Exercise the real default and timeout, without selecting an entry.
                 return
-            if mode == "desktop":
-                vm.key("home")
-                vm.key("down")
-            else:
-                vm.key("end")
+            vm.key("end")
             vm.key("ret")
             return
         time.sleep(0.2)
     raise SmokeFailure("GRUB entries were not recognized before the boot deadline")
 
 
-def installer_without_disk(args, vm, deadline):
+def wait_installer_screen(args, vm, name, expected, deadline):
     while time.monotonic() < deadline:
-        if "tidak ada disk kosong" in read_screen(args, vm, "installer-waiting"):
-            return vm.screenshot("installer-no-disk")
+        if vm.process.poll() is not None:
+            raise SmokeFailure(f"QEMU exited before the {name} screen")
+        text = read_screen(args, vm, "installer-waiting")
+        if all(fragment in text for fragment in expected):
+            return vm.screenshot(name)
         time.sleep(1)
-    raise SmokeFailure("The default boot did not automatically open the installer no-disk dialog")
+    raise SmokeFailure(f"The {name} screen did not appear")
 
 
 def next_report(server, vm, stage, deadline, results):
@@ -277,17 +276,20 @@ def run_boot(args, server, mode):
         vm.start()
         select_grub(args, vm, mode, min(deadline, started + 90))
         if mode == "installer":
-            screenshot = installer_without_disk(args, vm, deadline)
+            no_disk = wait_installer_screen(
+                args, vm, "installer-no-disk", ("no eligible empty disk",), deadline,
+            )
+            vm.key("esc")
+            actions = wait_installer_screen(
+                args, vm, "installer-actions", ("open installer", "restart", "shut down"), deadline,
+            )
             return {"ok": True, "elapsed_seconds": round(time.monotonic() - started, 2),
-                    "evidence": str(screenshot)}
+                    "evidence": [str(no_disk), str(actions)]}
         command = f"curl -fsS {server.guest_url}/{mode}.py | python\n"
         # Readiness is proven by a report from the real terminal, not by a fixed boot sleep.
         while time.monotonic() < deadline:
             text = read_screen(args, vm, "waiting")
-            if mode == "desktop":
-                vm.key("meta_l", "ret")
-                time.sleep(1)
-            elif not re.search(r"liveuser[@a]cachyos|automatic login", text):
+            if not re.search(r"liveuser[@a]cachyos|automatic login", text):
                 time.sleep(1)
                 continue
             vm.type(command)
@@ -306,16 +308,6 @@ def run_boot(args, server, mode):
         # Mapped surfaces precede their first rendered/animated frames.
         time.sleep(1)
         vm.screenshot("baseline")
-        if mode == "desktop":
-            vm.key("meta_l", "spc")
-            next_report(server, vm, "wofi", deadline, reports)
-            time.sleep(1)
-            vm.screenshot("wofi")
-            vm.key("esc")
-            vm.key("meta_l", "e")
-            next_report(server, vm, "thunar", deadline, reports)
-            time.sleep(1)
-            vm.screenshot("thunar")
         return {"ok": True, "elapsed_seconds": round(time.monotonic() - started, 2),
                 "reports": str(directory / "reports.json")}
     except Exception:
@@ -399,7 +391,7 @@ def main():
         server = ProbeServer(Path(__file__).with_name("guest_probe.py").read_text(encoding="utf-8"))
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
-        for mode in ("installer", "desktop", "fallback"):
+        for mode in ("installer", "fallback"):
             print(f"Booting {mode}; evidence: {args.output / mode}", flush=True)
             summary["boots"][mode] = run_boot(args, server, mode)
             save_json(args.output / "summary.json", summary)

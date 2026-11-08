@@ -40,22 +40,22 @@ class DiskSafetyTests(unittest.TestCase):
 
     def test_rejects_partitioned_disk_even_without_mounts(self):
         self.disk['children'] = [{'path': '/dev/vda1'}]
-        self.reject(self.disk, [], 'partisi atau mount')
+        self.reject(self.disk, [], 'partitions or mounts')
 
     def test_rejects_mounted_whole_disk_without_partitions(self):
         self.disk['mountpoints'] = ['/media/data']
-        self.reject(self.disk, [], 'partisi atau mount')
+        self.reject(self.disk, [], 'partitions or mounts')
 
     def test_rejects_filesystem_signature_without_partitions(self):
         self.reject(self.disk, [{'type': 'btrfs', 'offset': '0x10040'}], 'signature')
 
     def test_rejects_disk_below_minimum_size(self):
         self.disk['size'] -= 1
-        self.reject(self.disk, [], 'minimal 32 GiB')
+        self.reject(self.disk, [], 'at least 32 GiB')
 
     def test_rejects_removable_disk(self):
         self.disk['rm'] = True
-        self.reject(self.disk, [], 'disk tetap')
+        self.reject(self.disk, [], 'non-removable disk')
 
 
 class PreflightSafetyTests(unittest.TestCase):
@@ -76,7 +76,7 @@ class PreflightSafetyTests(unittest.TestCase):
                     patch.object(backend, 'require_live'), \
                     patch.object(backend, 'disk_identity', return_value=disk), \
                     patch.object(backend, 'command', side_effect=AssertionError('Mutasi disk sebelum validasi')) as command:
-                with self.assertRaisesRegex(RuntimeError, 'preflight berubah'):
+                with self.assertRaisesRegex(RuntimeError, 'changed after preflight'):
                     backend.storage()
                 command.assert_not_called()
 
@@ -90,7 +90,7 @@ class PreflightSafetyTests(unittest.TestCase):
                     patch.object(backend, 'require_live'), \
                     patch.object(backend, 'disk_identity', return_value=replaced), \
                     patch.object(backend, 'command', side_effect=AssertionError('Mutasi disk sebelum validasi')) as command:
-                with self.assertRaisesRegex(RuntimeError, 'Disk berubah'):
+                with self.assertRaisesRegex(RuntimeError, 'disk changed'):
                     backend.storage()
                 command.assert_not_called()
 

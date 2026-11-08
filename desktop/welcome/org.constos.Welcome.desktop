@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=Selamat Datang
-Comment=Kenali desktop ConstOS
+Name=Welcome
+Comment=Get started with the ConstOS desktop
 Exec=/usr/lib/constos/welcome/welcome.py
 Icon=constos
 Terminal=false

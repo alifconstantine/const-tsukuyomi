@@ -2,7 +2,7 @@
 set -euo pipefail
 root=${1:?Usage: installer/install.sh ROOT}
 root=$(realpath -e -- "$root")
-[[ $# == 1 && "$root" != / && -d "$root" ]] || { printf 'ROOT harus direktori staging, bukan /.\n' >&2; exit 1; }
+[[ $# == 1 && "$root" != / && -d "$root" ]] || { printf 'ROOT must be an existing staging directory other than /.\n' >&2; exit 1; }
 source_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 install -Dm644 "$source_dir/settings.conf" "$root/usr/share/constos/installer/calamares/settings.conf"
 install -d "$root/usr/share/constos/installer/calamares/modules" "$root/usr/share/constos/installer/calamares/branding/constos" \
@@ -20,7 +20,6 @@ for file in "$source_dir/modules/constos/module.desc" "$source_dir/modules/const
 done
 install -Dm755 "$source_dir/scripts/backend.py" "$root/usr/lib/constos-installer/backend.py"
 install -Dm755 "$source_dir/scripts/constos-install" "$root/usr/bin/constos-install"
-install -Dm644 "$source_dir/applications/constos-install.desktop" "$root/usr/share/applications/constos-install.desktop"
-install -Dm644 "$source_dir/session/constos-installer-autostart.service" "$root/usr/lib/systemd/user/constos-installer-autostart.service"
-install -Dm644 "$source_dir/session/10-installer.conf" "$root/usr/lib/systemd/user/constos-session.target.d/10-installer.conf"
+install -Dm644 "$source_dir/session/constos-installer.desktop" "$root/usr/share/wayland-sessions/constos-installer.desktop"
+install -Dm755 "$source_dir/session/kiosk" "$root/usr/lib/constos-installer/kiosk"
 install -m644 "$source_dir/target-packages.x86_64" "$source_dir/pacman.conf" "$root/usr/share/constos/installer/"

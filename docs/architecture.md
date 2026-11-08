@@ -9,7 +9,7 @@ Dokumen ini menjelaskan batas komponen dan arah desain. Status serta bukti pener
 | Area | Implementasi saat ini | Target dan batas |
 | --- | --- | --- |
 | Build dan boot | Profil Archiso di `iso/`, kernel CachyOS BORE, tema GRUB/Plymouth/SDDM, dan `iso/install-boot.sh`. Roadmap mencatat bukti build baseline serta verifikasi integrasi terbaru. | CI Linux, pembuktian seluruh skenario Boot UI di VM baru, dan bukti perangkat fisik. BIOS, Secure Boot, dan varian kernel/CPU bukan dukungan implisit. |
-| Desktop live | `desktop/install.sh` memasang sesi `constos.desktop` → `constos-session`, Lua Hyprland, unit user `constos-session.target`, tema fallback, portal, MIME, dan override GSettings. | Shell/Settings Quickshell/QML masih perlu spike fokus, multi-monitor, aksesibilitas, dan performa. Fallback tetap tersedia selama cutover. |
+| Sesi grafis | ISO men-stage sesi khusus Calamares di Cage. Pada target, `desktop/install.sh` memasang `constos.desktop` → `constos-session`, Lua Hyprland, layanan user, portal, dan asosiasi MIME. | Kiosk installer perlu dibuktikan pada ISO baru. Shell/Settings Quickshell/QML masih perlu spike fokus, multi-monitor, aksesibilitas, dan performa. |
 | Screenshot dan media | `constos-screenshot` dipakai oleh Print, Alt+Print, launcher, dan Waybar; seleksi dibatalkan tanpa menimpa clipboard. | Pembuktian pada sesi live/installed penuh, lalu UI screenshot, editor anotasi, recorder video, dan recorder audio di fase 07A. |
 | Sistem dan storage | Konfigurasi ZRAM/sysctl, paket `constos-core`/`constos-desktop`, serta launcher/backend Calamares untuk disk UEFI kosong. Pembuktian instalasi Btrfs, reboot tanpa ISO, dan login akun baru di SDDM telah lulus di VM. | Uji recovery/rollback Snapper dari bootloader dan verifikasi perangkat fisik sebelum ConstOS 1.0. |
 | Telemetri | CLI Rust `const` dari `constos-core` membaca data sistem pada target terpasang. Profil live masih memuat prototipe Python `constd` HTTP GET/JSON. | Satu collector Rust bersama dan IPC sesi bertipe. HTTP lama dihapus ketika konsumen sudah bermigrasi. |
@@ -24,7 +24,7 @@ Diagram ini adalah desain target, bukan inventaris layanan yang sudah berjalan.
 flowchart TD
     BUILD["Archiso dan paket ConstOS"] --> LIVE["Profil live"]
     BUILD --> INSTALL["Installer dan target terpasang"]
-    LIVE --> SESSION["Sesi pengguna Hyprland"]
+    LIVE --> KIOSK["Sesi installer Cage dan Calamares"]
     INSTALL --> SESSION
     SESSION --> SHELL["Shell, Settings, widget, dan Monitor"]
     SHELL --> CORE["CLI const dan constd Rust"]
@@ -53,7 +53,7 @@ flowchart TD
 | `crates/` | Sumber collector Rust, CLI `const` dalam crate `constosctl`, dan daemon `constd`. |
 | `system/` | Lokasi yang direncanakan untuk kebijakan sistem. |
 
-`iso/buildiso.sh` dan paket `constos-desktop` memanggil `desktop/install.sh` serta `iso/install-boot.sh` dengan mode `live` atau `installed`. Keduanya memakai sumber desktop/boot yang sama. Mode `installed` juga memasang Selamat Datang, katalog, dan entri launcher. File `.conf` Hyprland lama telah dihapus; sisa file di `desktop/` yang tidak dipasang helper tidak mengubah sesi.
+`iso/buildiso.sh` menjalankan `installer/install.sh` untuk sesi live. Paket `constos-desktop` menjalankan `desktop/install.sh` untuk sesi Hyprland, Welcome, dan entri launcher pada target. Keduanya memakai `iso/install-boot.sh` untuk tema boot/greeter bersama dan konfigurasi spesifik masing-masing. Entry Hyprland efektif berada di `desktop/hypr/hyprland.lua`.
 
 `packages/build-calamares.sh` membangun sumber Calamares yang dipatok commit dan checksum terhadap repo generik yang sama dengan ISO. Resep menyertakan dependensi SONAME Boost Python dan batas versi Python agar pergantian ABI tidak diterima diam-diam. `iso/buildiso.sh --calamares-dir DIR` memeriksa checksum arsip/sumber, lalu membuat repo lokal hanya pada konfigurasi build mkarchiso. Config pacman live disalin sebelum repo tersebut ditambahkan; config target berasal dari `installer/pacman.conf`. Installer Calamares dan repo build tidak ikut ke target terpasang.
 
@@ -87,9 +87,9 @@ Untuk Android, pilihan pada installer menyiapkan paket dan image Waydroid. Unit 
 
 ### Installer otomatis dan pengenalan desktop
 
-Entri GRUB **Instal ConstOS** menambahkan `constos.install` pada command line kernel. Drop-in sesi khusus ISO menarik `constos-installer-autostart.service` setelah environment Wayland tersedia. Unit memanggil launcher Calamares yang sama dengan menu desktop. Pemeriksaan disk, konfirmasi, dan preflight tetap dilakukan oleh installer. **Coba ConstOS** melewati unit karena penanda kernel tidak ada.
+Entri GRUB **Install ConstOS** memulai jalur grafis ISO. SDDM memakai autologin live yang sudah ada untuk menjalankan `constos-installer.desktop` sebagai `liveuser`. Cage membuka `kiosk` pada satu output dengan renderer perangkat lunak. Kiosk memanggil launcher installer dan menampilkan pilihan buka ulang, reboot, atau matikan ketika launcher keluar. Pemeriksaan disk, konfirmasi, dan preflight tetap berada pada backend yang sama. Entri **ConstOS Diagnostics** memakai `multi-user.target` dan membuka TTY.
 
-Paket `constos-desktop` memiliki satu aplikasi GTK untuk Selamat Datang dan Aplikasi Pilihan. Service sesi meminta tampilan Welcome pada login pertama. Aplikasi menyimpan pengabaian per akun di `$XDG_STATE_HOME/constos/welcome-seen`, dengan fallback `~/.local/state`. Startup sesi mengimpor direktori XDG yang dipakai sehingga service dan launcher membaca data pengguna yang sama. Membuka tampilan melalui launcher melewati pemeriksaan penanda. Kedua tampilan berbagi instance aplikasi yang sama.
+Paket `constos-desktop` memiliki satu aplikasi GTK untuk **Welcome** dan **Recommended Apps**. Service sesi meminta tampilan Welcome pada login pertama. Aplikasi menyimpan pengabaian per akun di `$XDG_STATE_HOME/constos/welcome-seen`, dengan fallback `~/.local/state`. Startup sesi mengimpor direktori XDG yang dipakai sehingga service dan launcher membaca data pengguna yang sama. Membuka tampilan melalui launcher melewati pemeriksaan penanda. Kedua tampilan berbagi instance aplikasi yang sama.
 
 Katalog memakai ID aplikasi tetap dan Flatpak per pengguna. Klik **Pasang** memicu penyiapan remote dari descriptor Flathub yang disertakan paket Flatpak, bila belum ada. Remote dengan URL berbeda, dinonaktifkan, atau tanpa verifikasi GPG ditolak. UI hanya menampilkan sukses setelah Flatpak mengonfirmasi ref aplikasi yang terpasang.
 

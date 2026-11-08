@@ -17,5 +17,5 @@ fn update_rejects_arguments_that_could_change_the_transaction() {
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(2));
-    assert!(String::from_utf8_lossy(&output.stderr).contains("Penggunaan: const update"));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("Usage: const update"));
 }

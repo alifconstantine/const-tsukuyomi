@@ -29,40 +29,40 @@ def capture(args):
 
 def require_live():
     if os.geteuid() != 0 or platform.machine() != 'x86_64':
-        raise RuntimeError('Installer memerlukan root pada x86_64.')
+        raise RuntimeError('The installer requires root on x86_64.')
     release = Path('/etc/os-release').read_text()
     if not re.search(r"^ID=['\"]?constos['\"]?$", release, re.M):
-        raise RuntimeError('Sumber instalasi bukan ConstOS.')
+        raise RuntimeError('This installation medium is not ConstOS.')
     if not any(word.startswith('archisobasedir=') or word == 'boot=archiso'
                for word in Path('/proc/cmdline').read_text().split()):
-        raise RuntimeError('Kernel tidak di-boot sebagai Archiso.')
+        raise RuntimeError('The system was not booted as an Archiso live image.')
     if not Path('/run/archiso/bootmnt').is_mount():
-        raise RuntimeError('Installer hanya boleh dijalankan dari ISO live Archiso.')
+        raise RuntimeError('The installer can only run from the Archiso live image.')
     if not Path('/sys/firmware/efi/efivars').is_dir():
-        raise RuntimeError('Hanya UEFI didukung; boot ulang ISO dalam mode UEFI.')
+        raise RuntimeError('Restart the ISO in UEFI mode to install ConstOS.')
     if 'ro' in capture(['findmnt', '-no', 'OPTIONS', '/sys/firmware/efi/efivars']).split(','):
-        raise RuntimeError('EFI variables harus writable untuk registrasi GRUB.')
+        raise RuntimeError('EFI variables must be writable to register GRUB.')
 
 
 def disk_identity(device):
     """Tolak media terpakai, termasuk signature tanpa tabel partisi."""
     st = os.stat(device)
     if not stat.S_ISBLK(st.st_mode):
-        raise RuntimeError('Target bukan block device.')
+        raise RuntimeError('The target is not a block device.')
     rows = json.loads(capture(['lsblk', '--json', '--bytes', '--paths', '--output',
                              'PATH,TYPE,SIZE,MODEL,SERIAL,WWN,MAJ:MIN,RO,RM,MOUNTPOINTS', device]))['blockdevices']
     if len(rows) != 1:
-        raise RuntimeError('Identitas disk tidak unik.')
+        raise RuntimeError('The disk identity is ambiguous.')
     disk = rows[0]
     if disk['path'] != device or disk['type'] != 'disk' or disk['ro'] or disk['rm']:
-        raise RuntimeError('Pilih whole disk tetap yang writable, bukan partisi/media lepas-pasang.')
+        raise RuntimeError('Select an entire writable, non-removable disk.')
     if disk.get('children') or any(disk.get('mountpoints') or []):
-        raise RuntimeError('Disk memiliki partisi atau mount; hanya disk kosong didukung.')
+        raise RuntimeError('The disk has partitions or mounts. Select an empty disk.')
     if int(disk['size']) < MIN_DISK:
-        raise RuntimeError('Disk target minimal 32 GiB.')
+        raise RuntimeError('The target disk must be at least 32 GiB.')
     signatures = json.loads(capture(['wipefs', '--json', '--no-act', device])).get('signatures', [])
     if signatures:
-        raise RuntimeError('Disk memiliki signature filesystem/partition; tidak akan dihapus otomatis.')
+        raise RuntimeError('The disk has a filesystem or partition signature. Select an empty disk.')
     return {key: disk.get(key) for key in ('path', 'size', 'model', 'serial', 'wwn', 'maj:min')}
 
 
@@ -72,10 +72,10 @@ def packages():
         item = line.partition('#')[0].strip()
         if item:
             if not re.fullmatch(r'[a-z0-9@+_.-]+', item):
-                raise RuntimeError('Manifest target tidak valid.')
+                raise RuntimeError('Invalid target package manifest.')
             result.append(item)
     if not result:
-        raise RuntimeError('Manifest paket target kosong.')
+        raise RuntimeError('The target package manifest is empty.')
     return result
 
 
@@ -85,16 +85,16 @@ def local_packages():
         digest, filename = line.split(maxsplit=1)
         filename = filename.lstrip('*')
         if Path(filename).name != filename or not re.fullmatch(r'[a-f0-9]{64}', digest):
-            raise RuntimeError('Manifest checksum paket lokal tidak valid.')
+            raise RuntimeError('Invalid local package checksum manifest.')
         path = ARTIFACTS / filename
         if hashlib.file_digest(path.open('rb'), 'sha256').hexdigest() != digest:
-            raise RuntimeError('Checksum paket lokal tidak cocok.')
+            raise RuntimeError('Local package checksum mismatch.')
         metadata = capture(['pacman', '-Qp', str(path)]).split()
         if len(metadata) != 2 or metadata[0] not in ('constos-core', 'constos-desktop'):
-            raise RuntimeError('Artefak lokal bukan paket ConstOS yang diizinkan.')
+            raise RuntimeError('The local artifact is not an approved ConstOS package.')
         result.append((metadata[0], path))
     if sorted(name for name, _ in result) != ['constos-core', 'constos-desktop']:
-        raise RuntimeError('Diperlukan tepat dua paket lokal ConstOS.')
+        raise RuntimeError('Exactly two local ConstOS packages are required.')
     return [path for _, path in result]
 
 
@@ -102,17 +102,17 @@ def transaction_packages():
     """Berkas tepat hasil unduhan bertanda tangan, tanpa resolusi repo baru."""
     entries = json.loads((WORK / 'transaction.json').read_text())
     if not entries:
-        raise RuntimeError('Transaksi preflight kosong.')
+        raise RuntimeError('The preflight package transaction is empty.')
     result = []
     for entry in entries:
         filename = entry['filename']
         if Path(filename).name != filename or not re.fullmatch(r'[a-f0-9]{64}', entry['sha256']):
-            raise RuntimeError('Manifest transaksi preflight tidak valid.')
+            raise RuntimeError('Invalid preflight transaction manifest.')
         archive = WORK / 'cache' / filename
         with archive.open('rb') as stream:
             actual = hashlib.file_digest(stream, 'sha256').hexdigest()
         if actual != entry['sha256']:
-            raise RuntimeError('Paket hasil preflight berubah; instalasi dihentikan.')
+            raise RuntimeError('A package changed after preflight. Installation stopped.')
         result.append(archive)
     return result
 
@@ -121,18 +121,18 @@ def preflight():
     require_live()
     state = json.loads((WORK / 'disk.json').read_text())
     if disk_identity(state['path']) != state:
-        raise RuntimeError('Identitas disk berubah; mulai ulang installer.')
+        raise RuntimeError('The disk identity changed. Restart the installer.')
     for binary in ('pacstrap', 'arch-chroot', 'genfstab', 'sfdisk', 'udevadm',
                    'mkfs.fat', 'mkfs.btrfs', 'btrfs', 'mount', 'umount', 'pacman', 'pacman-key'):
         if not shutil.which(binary):
-            raise RuntimeError(f'Dependensi installer hilang: {binary}')
+            raise RuntimeError(f'Missing installer dependency: {binary}')
     if capture(['timedatectl', 'show', '--property=NTPSynchronized', '--value']) != 'yes':
-        raise RuntimeError('Waktu belum tersinkron NTP. Sambungkan jaringan dan tunggu sinkronisasi.')
+        raise RuntimeError('The clock has not synchronized. Connect to the network and wait for time synchronization.')
     # Tidak mereset/menghapus keyring live. Pacman memverifikasi setiap signature
     # paket di bawah dengan keyring yang sudah dipersiapkan saat build ISO.
     for name in ('archlinux', 'cachyos'):
         if not Path(f'/usr/share/pacman/keyrings/{name}.gpg').is_file():
-            raise RuntimeError(f'Keyring {name} belum terpasang.')
+            raise RuntimeError(f'The {name} keyring is missing.')
     command(['pacman-key', '--list-keys'], stdout=subprocess.DEVNULL)
     local_packages()
     (WORK / 'db').mkdir(exist_ok=True)
@@ -151,7 +151,7 @@ def preflight():
     entries = []
     for filename in filenames:
         if not filename or Path(filename).name != filename:
-            raise RuntimeError('Nama arsip hasil resolusi paket tidak valid.')
+            raise RuntimeError('Invalid filename in the resolved package transaction.')
         archive = WORK / 'cache' / filename
         with archive.open('rb') as stream:
             digest = hashlib.file_digest(stream, 'sha256').hexdigest()
@@ -165,7 +165,7 @@ def storage():
     require_live()
     expected = json.loads((WORK / 'disk.json').read_text())
     if disk_identity(expected['path']) != expected:
-        raise RuntimeError('Disk berubah atau tidak lagi kosong; instalasi dihentikan.')
+        raise RuntimeError('The disk changed or is no longer empty. Installation stopped.')
     transaction_packages()
     device = expected['path']
     command(['sfdisk', '--lock=yes', '--wipe=never', device], input=(
@@ -206,7 +206,7 @@ def bootstrap(root):
         owner = subprocess.run(['pacman', '--root', str(root), '-Qqo', str(identity)],
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if owner.returncode != 1:
-            raise RuntimeError('Symlink os-release sudah dimiliki paket atau tidak dapat diperiksa.')
+            raise RuntimeError('The os-release symlink is package-owned or could not be checked.')
         # tmpfiles membuat symlink upstream yang tidak dimiliki paket. Hapus hanya
         # symlink ini agar backup baru core tidak dialihkan menjadi .pacnew.
         identity.unlink()
@@ -214,7 +214,7 @@ def bootstrap(root):
              '-U', '--noconfirm', *local_packages()])
     shutil.copyfile(root / 'usr/share/constos/pacman.conf', root / 'etc/pacman.conf')
     if not re.search(r"^ID=['\"]?constos['\"]?$", identity.read_text(), re.M):
-        raise RuntimeError('Identitas target ConstOS tidak terpasang.')
+        raise RuntimeError('The ConstOS release metadata is missing from the target.')
     (root / 'etc/fstab').write_text(capture(['genfstab', '-U', root]) + '\n')
     command(['arch-chroot', root, 'pacman-key', '--populate', 'archlinux', 'cachyos'])
 
@@ -224,12 +224,12 @@ def finalize(root):
     # Akun/login dibuat modul users upstream, bukan salinan passwd/shadow live.
     passwd = (root / 'etc/passwd').read_text()
     if any(line.split(':', 1)[0] == 'liveuser' for line in passwd.splitlines()):
-        raise RuntimeError('Akun live ditemukan pada target; instalasi ditolak.')
+        raise RuntimeError('The live user exists on the target. Installation stopped.')
     if list((root / 'etc/mkinitcpio.conf.d').glob('*archiso*')):
-        raise RuntimeError('Konfigurasi initramfs live ditemukan pada target.')
+        raise RuntimeError('Live initramfs configuration found on the target.')
     for path in (root / 'etc/sddm.conf.d').glob('*.conf'):
         if re.search(r'^\s*\[Autologin\]', path.read_text(), re.M):
-            raise RuntimeError('Konfigurasi autologin tidak diizinkan pada target.')
+            raise RuntimeError('Autologin configuration is not allowed on the target.')
     grub = root / 'etc/default/grub'
     grub_text = grub.read_text()
     grub_text = re.sub(r'^GRUB_CMDLINE_LINUX_DEFAULT=.*$',
@@ -282,7 +282,7 @@ def finalize(root):
              '--efi-directory=/boot/efi', '--removable', '--no-nvram'])
     command(['arch-chroot', root, 'grub-mkconfig', '-o', '/boot/grub/grub.cfg'])
     command(['arch-chroot', root, 'snapper', '--no-dbus', '-c', 'root', 'create',
-             '--description', 'Instalasi awal ConstOS', '--cleanup-algorithm', 'number'])
+             '--description', 'Initial ConstOS installation', '--cleanup-algorithm', 'number'])
 
 
 def unmount():
@@ -290,7 +290,7 @@ def unmount():
     if marker.exists():
         root = Path(marker.read_text())
         if root.parent != Path('/mnt') or not root.name.startswith('constos-root-'):
-            raise RuntimeError('Mount target tidak valid.')
+            raise RuntimeError('Invalid target mount point.')
         if root.is_mount():
             command(['umount', '--recursive', root])
         root.rmdir()
@@ -308,7 +308,7 @@ def launch():
     with (WORK / 'lock').open('w') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if (WORK / 'root').exists():
-            raise RuntimeError('Ada mount instalasi sebelumnya. Reboot ISO sebelum mencoba lagi.')
+            raise RuntimeError('A previous installation mount still exists. Reboot the ISO before trying again.')
         # Simpan juga error loader/branding yang terjadi sebelum logger Qt siap.
         log_path = WORK / 'calamares.log'
         with log_path.open('w') as log:
@@ -323,17 +323,17 @@ def launch():
                 continue
             eligible.extend([disk['path'], f"{disk['size'] / 1024**3:.1f} GiB | {disk['model'] or '-'} | serial {disk['serial'] or '-'} | WWN {disk['wwn'] or '-'} | {disk['maj:min']}"])
         if not eligible:
-            raise RuntimeError('Tidak ada disk kosong tetap minimal 32 GiB. Disk yang memiliki signature/partisi tidak didukung.')
-        selected = dialog('--list', '--title=Instalasi ConstOS — disk kosong', '--width=1000', '--height=420',
-                          '--text=Hanya online UEFI x86_64. Seluruh disk yang dipilih akan dipartisi.\nTidak mendukung LUKS, dual boot, atau offline.',
-                          '--column=Disk', '--column=Identitas', *eligible)
+            raise RuntimeError('No eligible empty disk found. Connect a fixed disk of at least 32 GiB with no partitions or filesystem signatures.')
+        selected = dialog('--list', '--title=Install ConstOS — Select an empty disk', '--width=1000', '--height=420',
+                          '--text=An internet connection and x86_64 UEFI are required. The installer will partition the entire selected disk.\nThis release supports empty disks only, without encryption or dual boot.',
+                          '--column=Disk', '--column=Disk details', *eligible)
         disk = disk_identity(selected)
         # Plain text: metadata disk tidak ditafsirkan sebagai markup.
         identity = json.dumps(disk, ensure_ascii=False, indent=2)
-        confirmed = dialog('--entry', '--no-markup', '--title=Konfirmasi disk target',
-                           '--width=800', '--text=Target:\n' + identity + '\n\nLayout: GPT, ESP 1 GiB, Btrfs @ / @home / @snapshots.\nKetik path disk PERSIS untuk menyetujui penghapusan seluruh disk:')
+        confirmed = dialog('--entry', '--no-markup', '--title=Confirm the target disk',
+                           '--width=800', '--text=Target:\n' + identity + '\n\nLayout: GPT, ESP 1 GiB, Btrfs @ / @home / @snapshots.\nType the exact disk path to confirm erasing the entire disk:')
         if confirmed != selected:
-            raise RuntimeError('Konfirmasi path disk tidak cocok; tidak ada perubahan disk.')
+            raise RuntimeError('The disk path did not match. No changes were made to the disk.')
         (WORK / 'disk.json').write_text(json.dumps(disk))
         try:
             with log_path.open('a') as log:
@@ -349,21 +349,24 @@ if __name__ == '__main__':
         if uid:
             import pwd
             if pwd.getpwuid(uid).pw_name != 'liveuser':
-                raise RuntimeError('Launcher hanya tersedia untuk akun live ISO.')
+                raise RuntimeError('The launcher is available only to the live ISO user.')
             runtime = Path(f'/run/user/{uid}')
             display = sys.argv[1] if len(sys.argv) == 2 else ''
             if not re.fullmatch(r'wayland-[0-9]+', display) or runtime.stat().st_uid != uid:
-                raise RuntimeError('Sesi Wayland tidak valid.')
+                raise RuntimeError('Invalid Wayland session.')
             if not stat.S_ISSOCK((runtime / display).stat().st_mode):
-                raise RuntimeError('Socket Wayland tidak tersedia.')
-            os.environ.update(XDG_RUNTIME_DIR=str(runtime), WAYLAND_DISPLAY=display,
-                              QT_QPA_PLATFORM='wayland', GDK_BACKEND='wayland')
+                raise RuntimeError('The Wayland socket is unavailable.')
+            os.environ.update(
+                XDG_RUNTIME_DIR=str(runtime), WAYLAND_DISPLAY=display,
+                QT_QPA_PLATFORM='wayland', QT_QUICK_BACKEND='software',
+                GDK_BACKEND='wayland', GSK_RENDERER='cairo',
+            )
         sys.exit(launch())
     except subprocess.CalledProcessError as error:
         if error.cmd[0] == 'zenity' and error.returncode == 1:
             sys.exit(0)
         subprocess.run(['zenity', '--error', '--no-markup', '--text',
-                        f'Instalasi dihentikan. Periksa /run/constos-installer/calamares.log dan /run/constos-installer/pacman.log.\n{error}'])
+                        f'Installation stopped. Check /run/constos-installer/calamares.log and /run/constos-installer/pacman.log.\n{error}'])
         sys.exit(1)
     except Exception as error:
         subprocess.run(['zenity', '--error', '--no-markup', '--text', str(error)])

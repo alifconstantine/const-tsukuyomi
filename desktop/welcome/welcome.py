@@ -31,10 +31,10 @@ class Welcome(Gtk.Application):
             flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE,
         )
         self.add_main_option(
-            "first-login", 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE, "Buka pada login pertama", None,
+            "first-login", 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE, "Open on first login", None,
         )
         self.add_main_option(
-            "apps", 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE, "Buka Aplikasi Pilihan", None,
+            "apps", 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE, "Open Recommended Apps", None,
         )
         self.marker = welcome_marker()
         self.window = None
@@ -63,7 +63,7 @@ class Welcome(Gtk.Application):
 
     def build_window(self):
         self.window = Gtk.ApplicationWindow(
-            application=self, title="Selamat Datang · ConstOS", default_width=560, default_height=460,
+            application=self, title="Welcome · ConstOS", default_width=560, default_height=460,
         )
         self.window.connect("close-request", self.close_requested)
         scroll = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER)
@@ -82,20 +82,20 @@ class Welcome(Gtk.Application):
         return page
 
     def welcome_page(self):
-        page = self.page("Selamat datang di ConstOS", "Mulai dengan tiga pintasan desktop.")
+        page = self.page("Welcome to ConstOS", "Get started with three desktop shortcuts.")
         for shortcut, purpose in (
-            ("Super + Space", "Buka launcher"),
-            ("Super + E", "Buka file manager Thunar"),
-            ("Super + Enter", "Buka terminal Foot"),
+            ("Super + Space", "Open the app launcher"),
+            ("Super + E", "Open the Thunar file manager"),
+            ("Super + Enter", "Open the Foot terminal"),
         ):
             page.append(text_label(f"{shortcut}  ·  {purpose}"))
-        page.append(text_label("Super biasanya adalah tombol berlogo Windows."))
-        page.append(button("Aplikasi Pilihan", self.show_apps))
+        page.append(text_label("Super is usually the key with the Windows logo."))
+        page.append(button("Recommended Apps", self.show_apps))
         self.welcome_status = text_label("")
         page.append(self.welcome_status)
         actions = Gtk.Box(spacing=8, halign=Gtk.Align.END)
-        actions.append(button("Lewati", self.finish_welcome))
-        done = button("Selesai", self.finish_welcome)
+        actions.append(button("Skip", self.finish_welcome))
+        done = button("Done", self.finish_welcome)
         done.add_css_class("suggested-action")
         actions.append(done)
         page.append(actions)
@@ -103,8 +103,8 @@ class Welcome(Gtk.Application):
 
     def apps_page(self):
         page = self.page(
-            "Aplikasi Pilihan",
-            "Tombol Pasang mengunduh aplikasi dan runtime yang diperlukan dari Flathub untuk akun ini.",
+            "Recommended Apps",
+            "Install downloads the app and its required runtimes from Flathub for this account.",
         )
         for app_id, (name, description) in APPS.items():
             row = Gtk.Box(spacing=12)
@@ -112,7 +112,7 @@ class Welcome(Gtk.Application):
             caption.append(text_label(name, "heading"))
             caption.append(text_label(description))
             row.append(caption)
-            action = button("Pasang", lambda _, selected=app_id: self.start_install(selected))
+            action = button("Install", lambda _, selected=app_id: self.start_install(selected))
             action.set_valign(Gtk.Align.CENTER)
             action.set_sensitive(False)
             self.install_buttons[app_id] = action
@@ -126,8 +126,8 @@ class Welcome(Gtk.Application):
         status.append(self.apps_status)
         page.append(status)
         actions = Gtk.Box(spacing=8)
-        self.back = button("Kembali ke Selamat Datang", self.show_welcome)
-        self.refresh = button("Muat ulang", self.refresh_apps)
+        self.back = button("Back to Welcome", self.show_welcome)
+        self.refresh = button("Refresh", self.refresh_apps)
         actions.append(self.back)
         actions.append(self.refresh)
         page.append(actions)
@@ -135,11 +135,11 @@ class Welcome(Gtk.Application):
 
     def show_welcome(self, *_):
         self.welcome_opened = True
-        self.window.set_title("Selamat Datang · ConstOS")
+        self.window.set_title("Welcome · ConstOS")
         self.stack.set_visible_child_name("welcome")
 
     def show_apps(self, *_):
-        self.window.set_title("Aplikasi Pilihan · ConstOS")
+        self.window.set_title("Recommended Apps · ConstOS")
         self.stack.set_visible_child_name("apps")
         self.refresh_apps()
 
@@ -149,7 +149,7 @@ class Welcome(Gtk.Application):
                 dismiss_welcome(self.marker)
             except OSError:
                 self.show_welcome()
-                self.welcome_status.set_label("Status Welcome gagal disimpan. Periksa izin direktori pengguna.")
+                self.welcome_status.set_label("Could not save Welcome preferences. Check permissions for your user state directory.")
                 return False
         return True
 
@@ -167,7 +167,7 @@ class Welcome(Gtk.Application):
     def refresh_buttons(self):
         for app_id, action in self.install_buttons.items():
             present = self.installed is not None and app_id in self.installed
-            action.set_label("Terpasang" if present else "Pasang")
+            action.set_label("Installed" if present else "Install")
             action.set_sensitive(not self.busy and self.installed is not None and not present)
         self.back.set_sensitive(not self.busy)
         self.refresh.set_sensitive(not self.busy)
@@ -200,9 +200,9 @@ class Welcome(Gtk.Application):
     def refresh_apps(self, *_):
         def completed(result, error):
             self.installed = result
-            self.apps_status.set_label(f"Gagal memeriksa aplikasi. {error}" if error else "")
+            self.apps_status.set_label(f"Could not check installed apps. {error}" if error else "")
 
-        self.run_task("Memeriksa aplikasi yang terpasang…", installed_apps, completed)
+        self.run_task("Checking installed apps…", installed_apps, completed)
 
     def start_install(self, app_id):
         if self.busy or self.installed is None or app_id in self.installed:
@@ -211,12 +211,12 @@ class Welcome(Gtk.Application):
 
         def completed(_, error):
             if error:
-                self.apps_status.set_label(f"Gagal memasang {name}. {error}")
+                self.apps_status.set_label(f"Could not install {name}. {error}")
             else:
                 self.installed.add(app_id)
-                self.apps_status.set_label(f"{name} terpasang. Buka dari launcher.")
+                self.apps_status.set_label(f"{name} is installed. Open it from the app launcher.")
 
-        self.run_task(f"Memasang {name} dari Flathub…", lambda: install_app(app_id), completed)
+        self.run_task(f"Installing {name} from Flathub…", lambda: install_app(app_id), completed)
 
 
 if __name__ == "__main__":

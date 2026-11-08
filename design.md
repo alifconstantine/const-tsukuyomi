@@ -132,7 +132,7 @@ Escape menutup panel atau membatalkan preview yang bisa dibatalkan, lalu mengemb
 | Surface | Pemakaian desain dan batas |
 | --- | --- |
 | GRUB dan Plymouth | Palet statis vendor, logo sederhana, kontras tinggi, navigasi/log teks tetap tersedia; tidak membaca wallpaper atau preferensi pribadi |
-| SDDM | Identitas vendor yang sama, nama akun dan fokus ke kata sandi bila akun sudah dipilih. **Opsi masuk** membuka pilihan akun, sesi, dan tata letak keyboard. Tema stock tersedia untuk recovery |
+| SDDM | Identitas vendor yang sama, nama akun dan fokus ke kata sandi bila akun sudah dipilih. **Sign-in options** membuka pilihan akun, sesi, dan tata letak keyboard. Tema stock tersedia untuk recovery |
 | Lockscreen | Token sesi yang terakhir valid bila backend mendukung; autentikasi dan privasi lebih dahulu, tanpa riwayat clipboard/notifikasi sensitif |
 | Shell dan Settings | Token semantik bersama; launcher, panel, Quick Settings, notifikasi, dan form memakai state yang sama |
 | Capture dan izin | Sumber, status aktif, scope, durasi, cancel, dan Stop terbaca. Indikator tidak bergantung pada Island atau warna wallpaper |

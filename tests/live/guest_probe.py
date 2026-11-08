@@ -15,7 +15,6 @@ from pathlib import Path
 import pwd
 import re
 import shlex
-import socket
 import stat
 import subprocess
 import sys
@@ -108,26 +107,6 @@ class Probe:
                 raise RuntimeError("report server rejected evidence")
         return payload["ok"]
 
-    def wait_surface(self, name, function):
-        last_error = None
-        while True:
-            try:
-                self.remaining()
-                details = function()
-                if details:
-                    self.remaining()
-                    return True, details
-            except TimeoutError:
-                raise
-            except Exception as error:
-                last_error = f"{type(error).__name__}: {error}"
-            remaining = self.remaining()
-            if remaining <= 0.5:
-                suffix = f"; last error: {last_error}" if last_error else ""
-                raise TimeoutError(f"{name} surface not observed within 60 seconds{suffix}")
-            time.sleep(min(0.5, remaining))
-
-
 def read_text(path):
     return Path(path).read_text(encoding="utf-8").strip()
 
@@ -193,25 +172,22 @@ def package_versions(probe):
     packages = probe.run("pacman", "-Q").splitlines()
     valid = bool(packages) and all(len(line.split()) == 2 for line in packages)
     probe.metrics["packages"] = packages
-    # --version tidak memulai sesi compositor dan juga aman di console fallback.
-    version = probe.run("Hyprland", "--version")
-    probe.metrics["hyprland_version"] = version
-    return valid and bool(version), {"package_count": len(packages), "hyprland": version}
+    version = probe.run("cage", "-v")
+    probe.metrics["cage_version"] = version
+    return valid and bool(version), {"package_count": len(packages), "cage": version}
 
 
 def installer_runtime(probe):
-    version = probe.run("calamares", "--version")
+    version = probe.run("env", "QT_QPA_PLATFORM=offscreen", "calamares", "--version")
     probe.metrics["calamares_version"] = version
     return "calamares" in version.lower() and bool(re.search(r"\b3\.4\.\d+\b", version)), {
         "version": version, "required_module_abi": "3.4",
     }
 
 
-def live_desktop_without_installer(probe):
-    state = probe.run("systemctl", "--user", "show", "--property=ActiveState", "--value",
-                      "constos-installer-autostart.service")
-    welcome = Path("/usr/share/applications/org.constos.Welcome.desktop").exists()
-    return state == "inactive" and not welcome, {"installer_autostart": state, "welcome_entry": welcome}
+def live_sessions():
+    sessions = sorted(entry.name for entry in Path("/usr/share/wayland-sessions").glob("*.desktop"))
+    return sessions == ["constos-installer.desktop"], {"sessions": sessions}
 
 
 def boot_metadata(probe):
@@ -322,71 +298,6 @@ def zram():
     return bool(devices) and all(device["ok"] for device in devices), {"devices": devices}
 
 
-def hypr_json(probe, command):
-    return json.loads(probe.run("hyprctl", "-j", command))
-
-
-def client_summary(client):
-    return {key: client.get(key) for key in (
-        "address", "class", "initialClass", "pid", "mapped", "hidden", "size", "xwayland",
-    )}
-
-
-def app_clients(probe, app):
-    clients = hypr_json(probe, "clients")
-    if not isinstance(clients, list):
-        raise ValueError("hyprctl clients did not return a list")
-    return [client for client in clients
-            if app in (str(client.get("class", "")).lower(),
-                       str(client.get("initialClass", "")).lower())
-            and client.get("mapped") is True and client.get("hidden") is False
-            and int(client.get("pid", 0)) > 0
-            and len(client.get("size", [])) == 2 and all(n > 0 for n in client["size"])]
-
-
-def layer_surfaces(probe, namespace):
-    surfaces = []
-
-    def visit(value):
-        if isinstance(value, dict):
-            if (str(value.get("namespace", "")).lower() == namespace
-                    and value.get("w", 0) > 0 and value.get("h", 0) > 0):
-                surfaces.append({key: value.get(key) for key in ("namespace", "address", "x", "y", "w", "h", "pid")})
-            for child in value.values():
-                visit(child)
-        elif isinstance(value, list):
-            for child in value:
-                visit(child)
-
-    visit(hypr_json(probe, "layers"))
-    return surfaces
-
-
-def wayland_session(probe):
-    session_type = os.environ.get("XDG_SESSION_TYPE")
-    display = os.environ.get("WAYLAND_DISPLAY", "")
-    runtime = os.environ.get("XDG_RUNTIME_DIR", "")
-    if not display or (not os.path.isabs(display) and not runtime):
-        return False, {"session_type": session_type, "wayland_display": display, "socket_connected": False}
-    path = Path(display) if os.path.isabs(display) else Path(runtime) / display
-    is_socket = stat.S_ISSOCK(path.stat().st_mode)
-    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
-        connection.settimeout(min(2.0, probe.remaining()))
-        connection.connect(str(path))
-    monitors = hypr_json(probe, "monitors")
-    return session_type == "wayland" and is_socket and bool(monitors), {
-        "session_type": session_type, "wayland_display": display,
-        "socket_connected": True, "monitor_count": len(monitors),
-    }
-
-
-def active_foot(probe):
-    clients = app_clients(probe, "foot")
-    active = hypr_json(probe, "activewindow")
-    matches = [client for client in clients if client.get("address") == active.get("address")]
-    return bool(matches), {"active_foot_clients": [client_summary(client) for client in matches]}
-
-
 def console_tty():
     # stdin adalah pipe; /dev/tty menunjuk controlling terminal, bukan fd 0.
     with open(os.ctermid(), "rb", buffering=0) as terminal:
@@ -411,18 +322,8 @@ def journal(probe):
     }
 
 
-def waybar_layer(probe):
-    layers = layer_surfaces(probe, "waybar")
-    return bool(layers), {"surfaces": layers}
-
-
-def config_errors(probe):
-    errors = probe.run("hyprctl", "configerrors")
-    return not errors, {"error_output_empty": not errors}
-
-
 def baseline(probe):
-    probe.check("mode", lambda: (probe.mode in ("desktop", "fallback"), {"mode": probe.mode}))
+    probe.check("mode", lambda: (probe.mode == "fallback", {"mode": probe.mode}))
     probe.check("uefi", lambda: (Path("/sys/firmware/efi").is_dir(), {"efi_directory": Path("/sys/firmware/efi").is_dir()}))
     probe.check("kernel_bore", lambda: kernel(probe))
     probe.check("distro_identity", release_identity)
@@ -434,22 +335,15 @@ def baseline(probe):
     probe.check("zram_swap_zstd", zram)
     probe.check("versions", lambda: package_versions(probe))
     probe.check("boot_metadata", lambda: boot_metadata(probe))
-    if probe.mode == "desktop":
-        probe.check("sddm_active", lambda: unit_state(probe, "sddm.service", "active"))
-        probe.check("wayland_session", lambda: wayland_session(probe))
-        probe.check("active_foot", lambda: active_foot(probe))
-        probe.check("waybar_layer", lambda: waybar_layer(probe))
-        probe.check("hyprland_configerrors", lambda: config_errors(probe))
-        probe.check("installer_runtime", lambda: installer_runtime(probe))
-        probe.check("live_desktop_without_installer", lambda: live_desktop_without_installer(probe))
-    elif probe.mode == "fallback":
-        probe.check("console_boot_target", lambda: (
-            "systemd.unit=multi-user.target" in shlex.split(read_text("/proc/cmdline")),
-            {"expected_parameter": "systemd.unit=multi-user.target"},
-        ))
-        probe.check("sddm_inactive", lambda: unit_state(probe, "sddm.service", "inactive"))
-        probe.check("console_tty1", console_tty)
-        probe.check("current_boot_journal", lambda: journal(probe))
+    probe.check("installer_runtime", lambda: installer_runtime(probe))
+    probe.check("live_sessions", live_sessions)
+    probe.check("console_boot_target", lambda: (
+        "systemd.unit=multi-user.target" in shlex.split(read_text("/proc/cmdline")),
+        {"expected_parameter": "systemd.unit=multi-user.target"},
+    ))
+    probe.check("sddm_inactive", lambda: unit_state(probe, "sddm.service", "inactive"))
+    probe.check("console_tty1", console_tty)
+    probe.check("current_boot_journal", lambda: journal(probe))
 
 
 def main():
@@ -464,20 +358,6 @@ def main():
         baseline(probe)
         if not probe.report():
             return 1
-        if probe.mode == "desktop":
-            probe.begin("wofi")
-            probe.check("wofi_surface", lambda: probe.wait_surface(
-                "Wofi", lambda: layer_surfaces(probe, "wofi")
-                or [client_summary(client) for client in app_clients(probe, "wofi")],
-            ))
-            if not probe.report():
-                return 1
-            probe.begin("thunar")
-            probe.check("thunar_window", lambda: probe.wait_surface(
-                "Thunar", lambda: [client_summary(client) for client in app_clients(probe, "thunar")],
-            ))
-            if not probe.report():
-                return 1
         return 0
     except Exception as error:
         # Jangan tampilkan exception urllib: URL berisi token per-run.

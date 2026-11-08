@@ -1,7 +1,7 @@
 # Maintainer: ConstOS
 pkgname=constos-desktop
 pkgver=0.1.0
-pkgrel=2
+pkgrel=3
 pkgdesc='ConstOS Hyprland desktop, session and installed boot themes'
 arch=('any')
 url='https://github.com/alifconstantine/const-tsukuyomi'
@@ -25,6 +25,6 @@ sha256sums=("${CONSTOS_SOURCE_SHA256:?Build with packages/build-local.sh}")
 
 package() {
   local tree="$srcdir/constos"
-  bash "$tree/desktop/install.sh" "$pkgdir" installed
+  bash "$tree/desktop/install.sh" "$pkgdir"
   bash "$tree/iso/install-boot.sh" "$pkgdir" installed
 }

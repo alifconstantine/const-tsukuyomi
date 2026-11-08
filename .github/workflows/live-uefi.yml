@@ -90,7 +90,7 @@ jobs:
             --packages-dir "$(dirname -- "$BUILD_DIR")/packages" \
             --calamares-dir "$(dirname -- "$BUILD_DIR")/calamares"
 
-      - name: Cold boot installer, desktop live, dan console sebagai user biasa
+      - name: Cold boot installer dan console sebagai user biasa
         shell: bash
         env:
           BUILD_DIR: ${{ steps.paths.outputs.build }}

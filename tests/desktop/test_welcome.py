@@ -56,13 +56,13 @@ class AppCatalogTests(unittest.TestCase):
         )
         for remote in remotes:
             with self.subTest(remote=remote), patch.object(catalog, "flatpak", return_value=remote) as flatpak:
-                with self.assertRaisesRegex(RuntimeError, "konfigurasinya tidak cocok"):
+                with self.assertRaisesRegex(RuntimeError, "unexpected configuration"):
                     catalog.install_app(APP)
                 self.assertEqual(flatpak.call_args_list, [LIST_REMOTES])
 
     def test_install_requires_confirmation_from_installed_ref(self):
         with patch.object(catalog, "flatpak", side_effect=[REMOTE, "", ""]) as flatpak:
-            with self.assertRaisesRegex(RuntimeError, "belum mengonfirmasi"):
+            with self.assertRaisesRegex(RuntimeError, "did not confirm"):
                 catalog.install_app(APP)
         self.assertEqual(flatpak.call_args_list, [LIST_REMOTES, INSTALL, INFO])
 

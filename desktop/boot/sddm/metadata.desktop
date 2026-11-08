@@ -1,6 +1,6 @@
 [SddmGreeterTheme]
 Name=ConstOS
-Description=Greeter vendor ConstOS hitam, putih, dan biru
+Description=ConstOS black, white, and blue greeter
 Author=ConstOS Project
 Type=sddm-theme
 Version=1.0

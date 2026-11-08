@@ -48,60 +48,17 @@ lsof
 htop
 btop
 
-# --- Wayland Compositor & Hyprland Stack ---
-hyprland
-xorg-xwayland
+# --- Wayland installer kiosk ---
+cage
 mesa
-swaybg
-swayidle
-xdg-desktop-portal-hyprland
-xdg-desktop-portal-gtk
-waybar
-wofi
-foot
-thunar
-firefox
-mousepad
-ristretto
-evince
-file-roller
-thunar-archive-plugin
-gvfs
-udisks2
-xdg-user-dirs
-xdg-utils
-libnotify
-mako
-swaylock
-wlogout
-grim
-slurp
-wl-clipboard
-cliphist
-brightnessctl
-playerctl
-polkit-gnome
-qt5-wayland
 qt6-wayland
-
-# --- Audio & Media ---
-pipewire
-pipewire-alsa
-pipewire-pulse
-pipewire-jack
-wireplumber
-pavucontrol
-alsa-utils
 
 # --- Networking ---
 networkmanager
-network-manager-applet
 wireless_tools
 wpa_supplicant
 bluez
 bluez-utils
-blueman
-nm-connection-editor
 curl
 wget
 rsync

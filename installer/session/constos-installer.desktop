@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=ConstOS Installer
+Comment=Install ConstOS from the live media
+Exec=env -u DISPLAY -u WAYLAND_DISPLAY WLR_RENDERER=pixman /usr/bin/cage -s -m last -- /usr/lib/constos-installer/kiosk
+TryExec=/usr/bin/cage
+DesktopNames=ConstOS-Installer

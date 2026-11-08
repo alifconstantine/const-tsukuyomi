@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -u
+export GDK_BACKEND=wayland GSK_RENDERER=cairo
+
+action='Open installer'
+while true; do
+    case "$action" in
+        'Open installer')
+            # Return to the action chooser after cancel, success, or failure.
+            /usr/bin/constos-install
+            ;;
+        Restart|Shut\ down)
+            if [[ $action == Restart ]]; then
+                power_command=reboot
+            else
+                power_command=poweroff
+            fi
+            if sudo -n /usr/bin/systemctl "$power_command"; then
+                exit 0
+            fi
+            zenity --error --title='ConstOS Installer' --text='The requested power action failed.'
+            ;;
+    esac
+    action=$(zenity --list --title='ConstOS Installer' --text='Choose an action.' \
+        --width=400 --height=280 --column='Action' --hide-header \
+        --ok-label='Continue' --cancel-label='Close' 'Open installer' Restart 'Shut down') || exit 0
+done

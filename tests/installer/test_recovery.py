@@ -32,17 +32,17 @@ class TargetRecoverySafetyTests(unittest.TestCase):
 
     def test_finalize_rejects_liveuser_in_target(self):
         (self.root / 'etc/passwd').write_text('root:x:0:0::/root:/bin/bash\nliveuser:x:1000:1000::/home/liveuser:/bin/bash\n')
-        with self.assertRaisesRegex(RuntimeError, 'Akun live ditemukan'):
+        with self.assertRaisesRegex(RuntimeError, 'The live user exists'):
             backend.finalize(self.root)
 
     def test_finalize_rejects_archiso_hooks_in_target(self):
         (self.root / 'etc/mkinitcpio.conf.d/archiso.conf').write_text('HOOKS=(base archiso)')
-        with self.assertRaisesRegex(RuntimeError, 'Konfigurasi initramfs live ditemukan'):
+        with self.assertRaisesRegex(RuntimeError, 'Live initramfs configuration found'):
             backend.finalize(self.root)
 
     def test_finalize_rejects_sddm_autologin_in_target(self):
         (self.root / 'etc/sddm.conf.d/10-autologin.conf').write_text('[Autologin]\nUser=liveuser\n')
-        with self.assertRaisesRegex(RuntimeError, 'Konfigurasi autologin tidak diizinkan'):
+        with self.assertRaisesRegex(RuntimeError, 'Autologin configuration is not allowed'):
             backend.finalize(self.root)
 
     def test_snapper_setup_preserves_files_at_unmounted_snapshot_path(self):
@@ -80,11 +80,11 @@ class TargetRecoverySafetyTests(unittest.TestCase):
         self.assertIn('TIMELINE_CLEANUP="yes"', config_text)
 
         # Periksa perintah snapper pembuat snapshot awal #1
-        snapshot_cmd = [cmd for cmd in commands if 'create' in cmd and 'Instalasi awal ConstOS' in cmd]
+        snapshot_cmd = [cmd for cmd in commands if 'create' in cmd and 'Initial ConstOS installation' in cmd]
         self.assertEqual(len(snapshot_cmd), 1)
         self.assertEqual([str(x) for x in snapshot_cmd[0]], [
             'arch-chroot', str(self.root), 'snapper', '--no-dbus', '-c', 'root', 'create',
-            '--description', 'Instalasi awal ConstOS', '--cleanup-algorithm', 'number'
+            '--description', 'Initial ConstOS installation', '--cleanup-algorithm', 'number'
         ])
 
 class SnapperFstabInvariantsTests(unittest.TestCase):

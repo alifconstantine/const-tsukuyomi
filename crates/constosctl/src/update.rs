@@ -21,17 +21,17 @@ fn is_installed_constos() -> io::Result<bool> {
 
 pub fn run() -> i32 {
     if !io::stdin().is_terminal() {
-        eprintln!("Jalankan const update dari terminal interaktif untuk mengonfirmasi transaksi.");
+        eprintln!("Run const update from an interactive terminal to confirm the transaction.");
         return 1;
     }
     match is_installed_constos() {
         Ok(true) => {}
         Ok(false) => {
-            eprintln!("const update hanya tersedia pada sistem ConstOS terpasang.");
+            eprintln!("const update is available on installed ConstOS systems only.");
             return 1;
         }
         Err(error) => {
-            eprintln!("Identitas sistem tidak dapat diperiksa ({error}).");
+            eprintln!("Could not check the system identity ({error}).");
             return 1;
         }
     }
@@ -40,6 +40,6 @@ pub fn run() -> i32 {
     let error = Command::new("/usr/bin/sudo")
         .args(["--", "/usr/bin/pacman", "-Syu"])
         .exec();
-    eprintln!("Gagal menjalankan sudo untuk pembaruan ({error}).");
+    eprintln!("Could not run sudo to start the update ({error}).");
     1
 }

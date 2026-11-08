@@ -25,7 +25,7 @@ fn doctor_distinguishes_systemd_query_errors_from_failed_units() {
         doctor_with_systemctl("printf '%s\\n' 'fixture.service loaded failed failed Fixture'");
     let stdout = String::from_utf8(failed_unit.stdout).unwrap();
     assert!(
-        stdout.contains("[FAIL] Layanan systemd · 1 unit gagal (fixture.service)"),
+        stdout.contains("[FAIL] systemd services · Failed units: 1 (fixture.service)"),
         "{stdout}"
     );
     assert_eq!(failed_unit.status.code(), Some(1));
@@ -33,7 +33,7 @@ fn doctor_distinguishes_systemd_query_errors_from_failed_units() {
     let healthy = doctor_with_systemctl("exit 0");
     let stdout = String::from_utf8(healthy.stdout).unwrap();
     assert!(
-        stdout.contains("[PASS] Layanan systemd · 0 unit gagal"),
+        stdout.contains("[PASS] systemd services · No failed units"),
         "{stdout}"
     );
 }
