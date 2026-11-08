@@ -2,8 +2,7 @@
 componentName: constos
 welcomeStyleCalamares: true
 welcomeExpandingLogo: true
-windowExpanding: normal
-windowSize: 800px,520px
+windowExpanding: fullscreen
 windowPlacement: center
 slideshow: [ logo-black.svg ]
 

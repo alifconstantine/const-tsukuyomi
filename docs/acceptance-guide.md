@@ -40,14 +40,14 @@ Di guest, periksa `lsblk -d -o NAME,SIZE,MODEL,SERIAL,WWN`. Disk target harus co
 | GRUB teks | Lewat console GRUB, `unset theme` lalu `terminal_output console`; kembali ke menu dan buktikan entri boot tetap bisa dipakai tanpa tema |
 | Diagnostics | Cold boot entri console; desktop tidak dimulai, `journalctl -b` dapat dibaca dari TTY |
 | Plymouth | Logo/progres terlihat, Escape membuka log, boot tetap maju; kegagalan grafis tidak memutus jalur teks |
-| Installer live | **Install ConstOS** membuka pemilihan disk dalam sesi Cage tanpa panel atau launcher desktop. Teks pertama tampil dalam bahasa Inggris. Uji Tab, Enter, Esc, dan pemilihan ulang setelah batal atau gagal |
+| Installer live | **Install ConstOS** membuka **Welcome** Calamares dalam sesi Cage dengan disk uji yang memenuhi syarat. Tanpa disk, tampil pesan **No eligible empty disk found**. Uji bahasa Inggris awal, Tab, Enter, Esc, dan pemilihan ulang setelah batal atau gagal |
 | SDDM | Buka **Sign-in options** untuk memilih pengguna, sesi, dan tata letak keyboard. Uji fokus Tab, Enter, dan menu daya. Dengan beberapa akun tanpa riwayat, pilih akun secara eksplisit. Uji juga jalur tanpa sesi terdaftar |
 | Login target | Pada boot pertama dengan satu akun baru, pastikan nama akun tampil dan fokus berada di kata sandi. Enter mengirim login ke SDDM, kata sandi salah menampilkan error dan fokus kembali ke kolom, kata sandi benar membuka sesi ConstOS. Login ulang memakai akun terakhir yang masih tersedia |
 | Recovery greeter | Pilih tema stock lewat konfigurasi di TTY sesuai panduan build, restart SDDM, dan pastikan login masih tersedia |
 
 Simpan screenshot setiap tahap yang benar-benar terlihat. Live autologin dapat melewati greeter saat boot; itu bukan bukti tampilan greeter sudah diperiksa. Jangan menguji password atau sesi pribadi pada screenshot yang akan dibagikan.
 
-Biarkan timeout GRUB memilih **Install ConstOS**. Batalkan pemilihan disk dan konfirmasi secara terpisah, lalu pastikan layar tindakan menawarkan **Open installer**, **Restart**, dan **Shut down**. Jalankan **Open installer** untuk memulai ulang. Pada cold boot lain, pilih **ConstOS Diagnostics** dan periksa TTY. Lanjutkan jalur utama sampai reboot tanpa ISO dan login di target.
+Biarkan timeout GRUB memilih **Install ConstOS**. Batalkan wizard dari **Disk** dan **Summary** pada percobaan terpisah, lalu pastikan layar tindakan menawarkan **Open installer**, **Restart**, dan **Shut down**. Jalankan **Open installer** untuk memulai ulang. Pada cold boot lain, pilih **ConstOS Diagnostics** dan periksa TTY. Lanjutkan jalur utama sampai reboot tanpa ISO dan login di target.
 
 ## Welcome dan Recommended Apps
 
@@ -97,12 +97,12 @@ Output bersih atau interface tersedia tidak menggantikan aksi pengguna pada tabe
 
 ## Installer dan reboot tanpa ISO
 
-Gunakan **ConstOS Diagnostics** untuk memeriksa `QT_QPA_PLATFORM=offscreen calamares --version` dan `pacman -Q constos-calamares boost-libs python` dari TTY. Paket lokal `constos-calamares 3.4.1-1` dibangun terhadap Boost 1.92 dan Python 3.14 pada baseline yang tercatat. Launcher memeriksa binary sebelum meminta konfirmasi disk. Log runtime ditulis ke `/run/constos-installer/calamares.log` dan `/run/constos-installer/pacman.log`.
+Gunakan **ConstOS Diagnostics** untuk memeriksa binary dan modul Disk sesuai [panduan build](build-guide.md#siapkan-host-build). Log runtime ditulis ke `/run/constos-installer/calamares.log` dan `/run/constos-installer/pacman.log`.
 
-1. Boot **Install ConstOS** dari GRUB. Batalkan satu kali sebelum konfirmasi disk dan periksa bahwa partisi tetap utuh, lalu pilih **Open installer**.
-2. Periksa mode UEFI, jaringan, waktu tersinkronisasi, keyring, sumber paket, ruang cache, serta paket lokal. Pada VM terpisah, uji jaringan/mirror gagal sebelum preflight; lalu uji putus jaringan setelah preflight selesai. Pemasangan sesudah partisi harus memakai arsip transaksi terverifikasi tanpa sinkronisasi/unduhan repo baru.
-3. Pilih disk kosong yang identitasnya sudah dicocokkan. Konfirmasi harus memperlihatkan path, kapasitas, dan identitas perangkat; jangan hanya mencocokkan ukuran. Disk berpartisi, bermount, atau memiliki signature harus ditolak pada jalur awal ini.
-4. Ikuti locale, keyboard, akun baru, dan summary. Periksa bahwa password tidak muncul pada summary atau log. Jalankan instalasi dan catat setiap error; halaman selesai hanya boleh muncul setelah seluruh backend berhasil.
+1. Boot **Install ConstOS** dari GRUB. Periksa **Welcome → Location → Keyboard → Disk → Users → Summary**. Pertahankan bahasa bawaan untuk uji Inggris. Pada percobaan terpisah, pilih bahasa lain di **Welcome** dan periksa bahwa Calamares menerapkan pilihan itu pada halaman bawaannya.
+2. Pilih disk kosong yang identitasnya sudah dicocokkan. Periksa path, kapasitas, dan detail identitas yang tersedia. Ketik path salah dan uji bahwa **Next** tetap nonaktif. Ketik path yang benar, lalu kembali dan ganti pilihan pada VM dengan dua disk uji untuk memastikan konfirmasi dikosongkan. Disk berpartisi, bermount, atau memiliki signature harus ditolak. Setelah Cancel, periksa bahwa disk uji belum berubah dan pilih **Open installer**.
+3. Buat akun baru, periksa disk pada **Summary**, lalu pilih **Install**. Periksa bahwa password tidak muncul pada Summary atau log. Halaman selesai hanya boleh muncul setelah seluruh backend berhasil.
+4. Pada VM terpisah, uji jaringan/mirror gagal sebelum preflight, lalu uji putus jaringan setelah preflight selesai. Pemasangan sesudah partisi harus memakai arsip transaksi terverifikasi tanpa sinkronisasi atau unduhan repo baru.
 5. Setelah selesai, matikan guest, lalu jalankan **`vm -boot order=c`** dari shell host yang sama. Tidak ada drive ISO pada perintah ini. Jangan sekadar reboot dengan ISO masih terpasang.
 6. Login melalui SDDM dengan akun baru. Periksa `/etc/os-release`, kernel, jaringan, desktop, filesystem, ZRAM, dan ulangi skenario desktop di atas.
 

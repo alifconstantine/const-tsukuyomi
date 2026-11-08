@@ -2,8 +2,8 @@
 # CMake sumber ini menyatakan 3.4.1/API 3.4; jangan mengganti versi menjadi 3.4.2.
 pkgname=constos-calamares
 pkgver=3.4.1
-pkgrel=1
-pkgdesc='Calamares Qt6 dengan modul installer ConstOS'
+pkgrel=2
+pkgdesc='Qt 6 Calamares with the ConstOS installer module'
 arch=('x86_64')
 url='https://github.com/CachyOS/cachyos-calamares'
 license=('GPL-3.0-or-later')
@@ -35,12 +35,19 @@ makedepends=('boost' 'cmake' 'extra-cmake-modules' 'ninja' 'qt6-tools')
 options=('!debug' '!emptydirs')
 _commit=199d71543db805fac2cc649ced72ad01dcb2c362
 source=("calamares-$_commit.tar.gz::https://codeload.github.com/CachyOS/cachyos-calamares/tar.gz/$_commit"
-        'qt-widgets.patch')
+        'qt-widgets.patch'
+        'constosdisk.cmake'
+        'constosdisk.cpp')
 sha256sums=('4670ed9b5fe9e185437fdb0a65638329b8b727973d6f4f7f1992d5bc33a593db'
-            'bc346dbdc3c39dc08b091309f5621b1c0ebcd67108aaddb436c33d9212c08731')
+            'bc346dbdc3c39dc08b091309f5621b1c0ebcd67108aaddb436c33d9212c08731'
+            '7b3822c49f2618a38a0040f2da6d17baf4aa5f0852492555b991f852ac57acfd'
+            '65978d404f1daa00f26c56d65bce28e82484712b1df72168b0ab758fe6300e64')
 
 prepare() {
-  patch -d "$srcdir/cachyos-calamares-$_commit" -p1 < "$srcdir/qt-widgets.patch"
+  local tree="$srcdir/cachyos-calamares-$_commit"
+  patch -d "$tree" -p1 < "$srcdir/qt-widgets.patch"
+  install -Dm644 "$srcdir/constosdisk.cmake" "$tree/src/modules/constosdisk/CMakeLists.txt"
+  install -Dm644 "$srcdir/constosdisk.cpp" "$tree/src/modules/constosdisk/constosdisk.cpp"
 }
 
 build() {

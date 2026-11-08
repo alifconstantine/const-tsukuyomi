@@ -58,6 +58,35 @@ class DiskSafetyTests(unittest.TestCase):
         self.reject(self.disk, [], 'non-removable disk')
 
 
+class DiskConfirmationTests(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.work = Path(directory.name)
+        self.disk = {'path': '/dev/vda', 'size': 40 * 1024**3, 'serial': 'QA-EMPTY'}
+        (self.work / 'eligible-disks.json').write_text(json.dumps([self.disk]))
+
+    def test_confirmation_must_match_exact_path(self):
+        with patch.object(backend, 'WORK', self.work), patch.object(backend, 'disk_identity') as probe:
+            with self.assertRaisesRegex(RuntimeError, 'exact disk path'):
+                backend.confirm_disk('/dev/vda', '/dev/vda ')
+            probe.assert_not_called()
+        self.assertFalse((self.work / 'disk.json').exists())
+
+    def test_confirmation_rejects_unlisted_or_replaced_disk(self):
+        replaced = {**self.disk, 'serial': 'OTHER-DISK'}
+        with patch.object(backend, 'WORK', self.work), patch.object(backend, 'disk_identity', return_value=replaced):
+            for path in ('/dev/vdb', '/dev/vda'):
+                with self.subTest(path=path), self.assertRaisesRegex(RuntimeError, 'unavailable or its identity changed'):
+                    backend.confirm_disk(path, path)
+        self.assertFalse((self.work / 'disk.json').exists())
+
+    def test_confirmed_disk_persists_its_reviewed_identity(self):
+        with patch.object(backend, 'WORK', self.work), patch.object(backend, 'disk_identity', return_value=self.disk):
+            backend.confirm_disk('/dev/vda', '/dev/vda')
+        self.assertEqual(json.loads((self.work / 'disk.json').read_text()), self.disk)
+
+
 class PreflightSafetyTests(unittest.TestCase):
     def test_modified_archive_blocks_partitioning(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -14,7 +14,7 @@ work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 mkdir -p -- "$output" "$work/sources" "$work/build" "$work/logs" "$work/srcpackages"
 # Build dan fingerprint memakai snapshot input yang sama, bukan checkout yang bisa berubah.
-inputs=(packages/build-calamares.sh packages/constos-calamares/PKGBUILD packages/constos-calamares/qt-widgets.patch)
+inputs=(packages/build-calamares.sh packages/constos-calamares/{PKGBUILD,qt-widgets.patch,constosdisk.cmake,constosdisk.cpp})
 for input in "${inputs[@]}"; do
   install -Dm644 -- "$repo/$input" "$work/inputs/$input"
 done

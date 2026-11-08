@@ -20,6 +20,8 @@ Paket diambil dari repositori CachyOS x86_64 generik dan repositori Arch. Untuk 
 
 Jalur rebuild ada di `packages/constos-calamares/PKGBUILD`: sumber [CachyOS Calamares `199d715`](https://github.com/CachyOS/cachyos-calamares/tree/199d71543db805fac2cc649ced72ad01dcb2c362), SHA-256 arsip `4670ed9b5fe9e185437fdb0a65638329b8b727973d6f4f7f1992d5bc33a593db`, lisensi GPL-3.0-or-later. Versi CMake sumber ini adalah **3.4.1/API 3.4**, bukan label paket upstream 3.4.2. Gunakan repo generik dengan urutan sama seperti `iso/pacman.conf` pada builder terisolasi; host dengan repo CPU-tier berbeda bukan bukti kecocokan ABI ISO. `makepkg` mengisi dependensi SONAME Boost Python dari hasil link, dan resep membatasi Python 3.14. Rebuild diperlukan ketika ABI berubah. Helper memakai dua proses build secara default; override melalui `CMAKE_BUILD_PARALLEL_LEVEL` sesuai kapasitas VM.
 
+Sejak `3.4.1-2`, paket ini juga mengompilasi modul halaman **Disk** di `packages/constos-calamares/`. Gunakan direktori artefak Calamares baru untuk ISO dengan wizard ini. `SOURCE_SHA256SUMS` mencakup kode modul, CMake, dan resep build. Di guest Diagnostics, periksa `pacman -Ql constos-calamares | grep /constosdisk/` sebelum menguji wizard.
+
 Patch `qt-widgets.patch` menambahkan dependensi target Qt Widgets untuk implementasi `show_warning()` pada API Python fork yang dipatok tersebut. Tanpa patch, kompilasi gagal karena `qmessagebox.h` tidak ditemukan. Fingerprint helper mencakup resep dan patch; jangan menerapkan patch hanya pada direktori kerja build.
 
 ## Rakit profil dan ISO

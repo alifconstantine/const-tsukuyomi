@@ -66,6 +66,29 @@ def disk_identity(device):
     return {key: disk.get(key) for key in ('path', 'size', 'model', 'serial', 'wwn', 'maj:min')}
 
 
+def eligible_disks():
+    rows = json.loads(capture(['lsblk', '--json', '--paths', '--output', 'PATH,TYPE']))['blockdevices']
+    disks = []
+    for row in rows:
+        if row['type'] != 'disk':
+            continue
+        try:
+            disks.append(disk_identity(row['path']))
+        except (RuntimeError, subprocess.CalledProcessError, FileNotFoundError):
+            continue
+    return disks
+
+
+def confirm_disk(selected, typed_path):
+    if not selected or typed_path != selected:
+        raise RuntimeError('Type the exact disk path to confirm the target.')
+    candidates = json.loads((WORK / 'eligible-disks.json').read_text())
+    disk = next((candidate for candidate in candidates if candidate['path'] == selected), None)
+    if disk is None or disk_identity(selected) != disk:
+        raise RuntimeError('The selected disk is unavailable or its identity changed. Reopen the installer.')
+    (WORK / 'disk.json').write_text(json.dumps(disk))
+
+
 def packages():
     result = []
     for line in (DATA / 'target-packages.x86_64').read_text().splitlines():
@@ -117,11 +140,9 @@ def transaction_packages():
     return result
 
 
-def preflight():
+def preflight(selected, typed_path):
     require_live()
-    state = json.loads((WORK / 'disk.json').read_text())
-    if disk_identity(state['path']) != state:
-        raise RuntimeError('The disk identity changed. Restart the installer.')
+    confirm_disk(selected, typed_path)
     for binary in ('pacstrap', 'arch-chroot', 'genfstab', 'sfdisk', 'udevadm',
                    'mkfs.fat', 'mkfs.btrfs', 'btrfs', 'mount', 'umount', 'pacman', 'pacman-key'):
         if not shutil.which(binary):
@@ -297,10 +318,6 @@ def unmount():
         marker.unlink()
 
 
-def dialog(*args):
-    return capture(['zenity', *args])
-
-
 def launch():
     require_live()
     WORK.mkdir(mode=0o700, exist_ok=True)
@@ -314,27 +331,11 @@ def launch():
         with log_path.open('w') as log:
             os.fchmod(log.fileno(), 0o600)
             command(['calamares', '--version'], stdout=log, stderr=subprocess.STDOUT)
-        rows = json.loads(capture(['lsblk', '--json', '--paths', '--output', 'PATH,TYPE']))['blockdevices']
-        eligible = []
-        for row in rows:
-            try:
-                disk = disk_identity(row['path'])
-            except (RuntimeError, subprocess.CalledProcessError):
-                continue
-            eligible.extend([disk['path'], f"{disk['size'] / 1024**3:.1f} GiB | {disk['model'] or '-'} | serial {disk['serial'] or '-'} | WWN {disk['wwn'] or '-'} | {disk['maj:min']}"])
+        eligible = eligible_disks()
         if not eligible:
             raise RuntimeError('No eligible empty disk found. Connect a fixed disk of at least 32 GiB with no partitions or filesystem signatures.')
-        selected = dialog('--list', '--title=Install ConstOS — Select an empty disk', '--width=1000', '--height=420',
-                          '--text=An internet connection and x86_64 UEFI are required. The installer will partition the entire selected disk.\nThis release supports empty disks only, without encryption or dual boot.',
-                          '--column=Disk', '--column=Disk details', *eligible)
-        disk = disk_identity(selected)
-        # Plain text: metadata disk tidak ditafsirkan sebagai markup.
-        identity = json.dumps(disk, ensure_ascii=False, indent=2)
-        confirmed = dialog('--entry', '--no-markup', '--title=Confirm the target disk',
-                           '--width=800', '--text=Target:\n' + identity + '\n\nLayout: GPT, ESP 1 GiB, Btrfs @ / @home / @snapshots.\nType the exact disk path to confirm erasing the entire disk:')
-        if confirmed != selected:
-            raise RuntimeError('The disk path did not match. No changes were made to the disk.')
-        (WORK / 'disk.json').write_text(json.dumps(disk))
+        (WORK / 'disk.json').unlink(missing_ok=True)
+        (WORK / 'eligible-disks.json').write_text(json.dumps(eligible))
         try:
             with log_path.open('a') as log:
                 return command(['calamares', '--config', '/usr/share/constos/installer/calamares'],
@@ -344,6 +345,7 @@ def launch():
 
 
 if __name__ == '__main__':
+    os.environ.update(LANG='C.UTF-8', LC_ALL='C.UTF-8', LANGUAGE='en_US:en')
     try:
         uid = int(os.environ.get('SUDO_UID', os.getuid()))
         if uid:
@@ -363,8 +365,6 @@ if __name__ == '__main__':
             )
         sys.exit(launch())
     except subprocess.CalledProcessError as error:
-        if error.cmd[0] == 'zenity' and error.returncode == 1:
-            sys.exit(0)
         subprocess.run(['zenity', '--error', '--no-markup', '--text',
                         f'Installation stopped. Check /run/constos-installer/calamares.log and /run/constos-installer/pacman.log.\n{error}'])
         sys.exit(1)

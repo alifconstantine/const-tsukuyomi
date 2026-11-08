@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -u
 export GDK_BACKEND=wayland GSK_RENDERER=cairo
+export LANG=C.UTF-8 LC_ALL=C.UTF-8 LANGUAGE=en_US:en
 
 action='Open installer'
 while true; do

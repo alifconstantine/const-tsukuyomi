@@ -17,7 +17,10 @@ def run():
     try:
         phase = libcalamares.job.configuration['phase']
         if phase == 'preflight':
-            backend.preflight()
+            backend.preflight(
+                libcalamares.globalstorage.value('constosDiskPath'),
+                libcalamares.globalstorage.value('constosDiskConfirmation'),
+            )
         elif phase == 'storage':
             root = backend.storage()
             libcalamares.globalstorage.insert('rootMountPoint', root)
