@@ -1,0 +1,8 @@
+[Unit]
+Description=ConstOS session lock
+PartOf=constos-session.target
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/swaylock --daemonize
+TimeoutStartSec=15

@@ -1,0 +1,24 @@
+@import "../constos/theme.css";
+
+* {
+    font-family: "Noto Sans", sans-serif;
+    font-size: 14px;
+    background-image: none;
+    box-shadow: none;
+}
+window { background: @canvas; }
+button {
+    color: @text;
+    background: @surface;
+    border: 1px solid @control_border;
+    border-radius: 10px;
+    margin: 12px;
+    padding: 24px;
+}
+button:hover { background: @surface_hover; }
+button:focus, button:active {
+    background: @accent_surface;
+    border: 2px solid @accent;
+    outline: none;
+}
+#shutdown:focus, #shutdown:active { border-color: @error; }

@@ -1,0 +1,40 @@
+# Archiso build directories & artifacts
+iso/work/
+iso/out/
+*.iso
+*.iso.sha256
+*.iso.zst
+
+# Pacman packages & custom repo databases
+*.pkg.tar.zst
+*.pkg.tar.xz
+*.db.tar.zst
+*.files.tar.zst
+packages/local-repo/*.pkg.tar.*
+packages/local-repo/*.db*
+packages/local-repo/*.files*
+!packages/local-repo/README.md
+
+# Node / Electron build artifacts
+node_modules/
+dist/
+dist-electron/
+.turbo/
+.pnpm-store/
+
+
+# Rust build artifacts
+target/
+# Python cache & virtualenvs
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+
+# Editor & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

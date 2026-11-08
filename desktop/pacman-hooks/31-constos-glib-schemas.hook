@@ -1,0 +1,11 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Path
+Target = usr/share/glib-2.0/schemas/*.gschema.override
+
+[Action]
+Description = Compiling GSettings schema overrides...
+When = PostTransaction
+Exec = /usr/bin/glib-compile-schemas /usr/share/glib-2.0/schemas

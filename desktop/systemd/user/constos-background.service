@@ -1,0 +1,8 @@
+[Unit]
+Description=ConstOS background
+PartOf=constos-session.target
+
+[Service]
+ExecStart=/usr/bin/swaybg -c #161616
+Restart=on-failure
+RestartSec=2

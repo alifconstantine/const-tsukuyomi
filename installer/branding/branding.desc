@@ -1,0 +1,31 @@
+---
+componentName: constos
+welcomeStyleCalamares: true
+welcomeExpandingLogo: true
+windowExpanding: normal
+windowSize: 800px,520px
+windowPlacement: center
+slideshow: [ logo-black.svg ]
+
+strings:
+    productName:         Const Tsukuyomi
+    version:             Alpha
+    shortVersion:        Alpha
+    versionedName:       Const Tsukuyomi Alpha
+    shortVersionedName:  Const Tsukuyomi
+    bootloaderEntryName: ConstOS
+    productUrl:          https://github.com/alifconstantine/const-tsukuyomi
+    supportUrl:          https://github.com/alifconstantine/const-tsukuyomi/issues
+    knownIssuesUrl:      https://github.com/alifconstantine/const-tsukuyomi/issues
+    releaseNotesUrl:     https://github.com/alifconstantine/const-tsukuyomi/releases
+
+images:
+    productLogo:         "logo.svg"
+    productIcon:         "constos.svg"
+    productWelcome:      "logo-black.svg"
+
+style:
+   SidebarBackground:    "#161616"
+   SidebarText:          "#FFFFFF"
+   SidebarTextCurrent:   "#FFFFFF"
+   SidebarBackgroundCurrent: "#262626"

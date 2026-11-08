@@ -1,0 +1,8 @@
+[Unit]
+Description=ConstOS waybar
+PartOf=constos-session.target
+
+[Service]
+ExecStart=/usr/bin/waybar
+Restart=on-failure
+RestartSec=2

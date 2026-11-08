@@ -1,0 +1,3 @@
+[Unit]
+Description=ConstOS graphical session services
+Wants=constos-waybar.service constos-mako.service constos-background.service constos-network-applet.service constos-bluetooth-applet.service constos-polkit-agent.service constos-idle.service

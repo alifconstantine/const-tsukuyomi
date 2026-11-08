@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "assets": [
+    {
+      "id": "const-mark",
+      "name": "Simbol Const untuk ConstOS",
+      "owner_package": "constos-desktop",
+      "source": "const-logo.svg",
+      "reference_rasters": ["const-logo-dark.png", "icon.png"],
+      "origin": "Simbol logo Const pada README ConstOS; digambar ulang sebagai dua path vektor tanpa menyematkan raster.",
+      "decision": "Dipilih pengguna pada 7 November 2026 untuk menggantikan logo C geometris pada boot dan desktop.",
+      "license_status": "Asal lisensi dan izin redistribusi logo sumber belum diaudit; tidak diasumsikan mengikuti lisensi kode proyek.",
+      "release_blocker": "Dokumentasikan pemilik hak logo dan izin redistribusi sebelum rilis publik.",
+      "view_box": [64, 64, 384, 384],
+      "variants": {
+        "default": "Putih #F5F5F5 pada latar transparan, tanpa aksen adaptif.",
+        "light_surface": "Hitam #161616 pada latar transparan.",
+        "application_icon": "Simbol putih di atas badge netral #161616 agar terbaca pada tema terang/gelap."
+      },
+      "exports": [
+        {"path": "exports/const-logo-boot.png", "width": 160, "height": 160, "format": "PNG RGBA", "usage": ["GRUB", "Plymouth"]},
+        {"path": "exports/const-logo-black.svg", "format": "SVG", "usage": ["README tema terang", "Calamares productWelcome"]},
+        {"path": "exports/constos.svg", "format": "SVG", "usage": ["ikon hicolor constos", "Calamares productIcon"]}
+      ],
+      "direct_svg_usage": ["README tema gelap", "SDDM", "Calamares productLogo", "/usr/share/constos/branding/const-logo.svg"],
+      "regenerate": "python3 assets/export-logo.py",
+      "export_dependencies": ["Python 3", "rsvg-convert (librsvg)"],
+      "build_policy": "Build memakai ekspor yang dikomit dan tidak memerlukan renderer, koneksi, atau layanan generasi gambar."
+    }
+  ]
+}

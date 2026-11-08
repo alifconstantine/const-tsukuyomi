@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Selamat Datang
+Comment=Kenali desktop ConstOS
+Exec=/usr/lib/constos/welcome/welcome.py
+Icon=constos
+Terminal=false
+Categories=Utility;

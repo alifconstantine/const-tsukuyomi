@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="64 64 384 384" color="#F5F5F5">
+  <rect x="64" y="64" width="384" height="384" rx="48" fill="#161616" /><title>Const</title>
+  <desc>Simbol Const, digambar ulang sebagai path vektor dari logo raster yang dipilih untuk ConstOS.</desc>
+  <g fill="currentColor">
+    <path d="M102 187C102 176 108 165 118 159L239 89C249 83 262 83 273 89L394 159C404 165 410 176 410 188V340C410 351 405 361 395 367L346 395C338 399 328 393 328 384V232C328 226 324 221 318 219L203 182C193 179 184 185 184 196V305C184 311 181 316 176 319L122 349C113 354 102 348 102 338Z" />
+    <path d="M139 391L260 306C264 303 268 302 273 302H290C297 302 302 307 302 314V398C302 417 284 432 266 427Z" />
+  </g>
+</svg>

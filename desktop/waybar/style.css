@@ -1,0 +1,48 @@
+@import "../constos/theme.css";
+
+* {
+    font-family: "Noto Sans", sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    border: none;
+    border-radius: 0;
+    min-height: 0;
+}
+window#waybar {
+    background: @surface;
+    color: @text;
+    border-bottom: 1px solid @border_subtle;
+}
+#workspaces button {
+    color: @text_muted;
+    background: transparent;
+    padding: 0 10px;
+    margin: 4px 2px;
+    border-radius: 6px;
+}
+#workspaces button.active {
+    background: @accent_surface;
+    color: @text;
+    box-shadow: inset 0 -2px @accent;
+}
+#workspaces button.urgent { color: @error; }
+#workspaces button:hover { background: @surface_hover; }
+#custom-launcher, #custom-power, #custom-screenshot,
+#clock, #network, #bluetooth, #wireplumber, #battery, #tray {
+    padding: 0 8px;
+    margin: 4px 0;
+    border-radius: 6px;
+}
+#custom-launcher { font-weight: 500; }
+#custom-launcher:hover, #custom-power:hover, #custom-screenshot:hover,
+#network:hover, #bluetooth:hover, #wireplumber:hover { background: @surface_hover; }
+#battery.warning { color: @warning; }
+#battery.critical { color: @error; }
+#battery.charging { color: @success; }
+#network.disconnected, #bluetooth.disabled, #wireplumber.muted { color: @text_muted; }
+tooltip {
+    background: @surface_raised;
+    color: @text;
+    border: 1px solid @control_border;
+    border-radius: 10px;
+}

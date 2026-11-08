@@ -1,0 +1,131 @@
+# =============================================================================
+# ConstOS Package Manifest (iso/packages.x86_64)
+# =============================================================================
+
+# --- Base & Kernel Subsistem ---
+base
+sudo
+linux-cachyos-bore
+mkinitcpio
+mkinitcpio-archiso
+linux-firmware
+amd-ucode
+intel-ucode
+cachyos-keyring
+cachyos-mirrorlist
+cachyos-settings
+cachyos-hooks
+chwd
+archlinux-keyring
+arch-install-scripts
+grub
+efibootmgr
+
+# --- Memory Management & Paging (Konsep SO #2) ---
+zram-generator
+
+# --- Storage & File Systems (Konsep SO #3) ---
+btrfs-progs
+snapper
+dosfstools
+e2fsprogs
+f2fs-tools
+exfatprogs
+cryptsetup
+parted
+gptfdisk
+
+# --- IPC, System Inspection & Sandboxing (Konsep SO #4 & #5) ---
+bubblewrap
+socat
+python
+python-psutil
+python-pip
+procps-ng
+pciutils
+usbutils
+lsof
+htop
+btop
+
+# --- Wayland Compositor & Hyprland Stack ---
+hyprland
+xorg-xwayland
+mesa
+swaybg
+swayidle
+xdg-desktop-portal-hyprland
+xdg-desktop-portal-gtk
+waybar
+wofi
+foot
+thunar
+firefox
+mousepad
+ristretto
+evince
+file-roller
+thunar-archive-plugin
+gvfs
+udisks2
+xdg-user-dirs
+xdg-utils
+libnotify
+mako
+swaylock
+wlogout
+grim
+slurp
+wl-clipboard
+cliphist
+brightnessctl
+playerctl
+polkit-gnome
+qt5-wayland
+qt6-wayland
+
+# --- Audio & Media ---
+pipewire
+pipewire-alsa
+pipewire-pulse
+pipewire-jack
+wireplumber
+pavucontrol
+alsa-utils
+
+# --- Networking ---
+networkmanager
+network-manager-applet
+wireless_tools
+wpa_supplicant
+bluez
+bluez-utils
+blueman
+nm-connection-editor
+curl
+wget
+rsync
+
+# --- Fonts & Icons ---
+ttf-jetbrains-mono-nerd
+noto-fonts
+noto-fonts-emoji
+papirus-icon-theme
+gsettings-desktop-schemas
+adwaita-cursors
+
+# --- Display Manager ---
+sddm
+qt6-declarative
+qt6-svg
+qt6-5compat
+xorg-server
+xorg-xauth
+plymouth
+
+# --- Installer khusus live; target tidak menyalin overlay ISO ---
+constos-calamares
+zenity
+
+# --- ConstOS Core Packages ---
+fastfetch

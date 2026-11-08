@@ -1,0 +1,2 @@
+# Administrasi target selalu memerlukan password akun.
+%wheel ALL=(ALL:ALL) ALL

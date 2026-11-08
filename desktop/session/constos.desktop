@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=ConstOS
+Comment=ConstOS desktop with Hyprland
+Exec=/usr/bin/constos-session
+TryExec=/usr/bin/Hyprland
+Type=Application
+DesktopNames=Hyprland

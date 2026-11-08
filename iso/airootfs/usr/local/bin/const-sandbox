@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# =============================================================================
+# ConstOS - Agent Execution Sandbox (Bubblewrap / bwrap)
+# =============================================================================
+# Membatasi eksekusi terminal otomatis dari agen AI Harness agar tidak dapat
+# memodifikasi file sistem root secara tidak sengaja.
+
+set -euo pipefail
+
+TARGET_DIR="${1:-$PWD}"
+shift || true
+
+# Verifikasi keberadaan bwrap
+if ! command -v bwrap >/dev/null 2>&1; then
+    echo "ConstOS sandbox requires bubblewrap (bwrap)." >&2
+    exit 127
+fi
+
+# Jalankan dalam sandbox terisolasi:
+# - Rootfs (/, /usr, /etc, /lib) di-mount Read-Only
+# - /tmp, /dev, /proc di-mount privat
+# - Direktori kerja target di-mount Read-Write
+exec bwrap \
+    --ro-bind / / \
+    --dev /dev \
+    --proc /proc \
+    --tmpfs /tmp \
+    --tmpfs /run \
+    --bind "${TARGET_DIR}" "${TARGET_DIR}" \
+    --chdir "${TARGET_DIR}" \
+    --unshare-all \
+    --share-net \
+    --die-with-parent \
+    -- "$@"

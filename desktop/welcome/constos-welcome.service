@@ -1,0 +1,8 @@
+[Unit]
+Description=Selamat Datang ConstOS pada login pertama
+PartOf=constos-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+Type=exec
+ExecStart=/usr/lib/constos/welcome/welcome.py --first-login

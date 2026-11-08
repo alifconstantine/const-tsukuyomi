@@ -1,0 +1,142 @@
+name: ConstOS Live UEFI
+
+# Hanya dispatch oleh maintainer pada ref tepercaya. Jangan tambahkan pull_request
+# atau pull_request_target: runner ini punya sudo dan keyring build tepercaya.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-uefi:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, Linux, X64, constos-build]
+    timeout-minutes: 180
+    env:
+      OVMF_CODE: ${{ vars.CONSTOS_OVMF_CODE }}
+      OVMF_VARS: ${{ vars.CONSTOS_OVMF_VARS }}
+    steps:
+      - name: Checkout bersih tanpa kredensial persisten
+        uses: actions/checkout@v4
+        with:
+          clean: true
+          persist-credentials: false
+
+      # Runner harus sudah CachyOS x86_64 dengan keyring terinisialisasi,
+      # dependency Archiso, QEMU dengan virtio-vga, OVMF, tesseract (eng), Python 3, dan sudo -n.
+      # Toolchain Rust dan dependency build Calamares juga harus tersedia.
+      - name: Periksa host dan siapkan direktori bukti baru
+        id: paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ $(uname -s) == Linux && $(uname -m) == x86_64 ]] || {
+            echo 'Runner harus Linux x86_64.' >&2
+            exit 1
+          }
+          (( EUID != 0 )) || {
+            echo 'Service runner harus user biasa; hanya build dijalankan melalui sudo -n.' >&2
+            exit 1
+          }
+          [[ -r /dev/kvm && -w /dev/kvm ]] || {
+            echo 'Smoke CI memerlukan akses KVM sebagai user runner; TCG bukan fallback CI.' >&2
+            exit 1
+          }
+          [[ -n "$OVMF_CODE" && -n "$OVMF_VARS" ]] || {
+            echo 'Isi repository vars CONSTOS_OVMF_CODE dan CONSTOS_OVMF_VARS dengan path firmware host.' >&2
+            exit 1
+          }
+          [[ -r "$OVMF_CODE" && -f "$OVMF_CODE" && -r "$OVMF_VARS" && -f "$OVMF_VARS" ]] || {
+            echo 'Firmware OVMF_CODE/OVMF_VARS harus file yang dapat dibaca user runner.' >&2
+            exit 1
+          }
+          for tool in sudo python3 qemu-system-x86_64 tesseract mkarchiso pacman git makepkg repo-add cmake ninja cargo rustc; do
+            command -v "$tool" >/dev/null || {
+              printf 'Tool runner belum tersedia: %s\n' "$tool" >&2
+              exit 1
+            }
+          done
+          sudo -n true
+          evidence_root="$RUNNER_TEMP/constos-live-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -- "$evidence_root"
+          printf 'root=%s\nbuild=%s\nsmoke=%s\n' \
+            "$evidence_root" "$evidence_root/build" "$evidence_root/smoke" >> "$GITHUB_OUTPUT"
+
+      - name: Regresi installer, katalog aplikasi, dan subsistem Rust
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/installer -p 'test_*.py'
+          python3 -m unittest discover -s tests/desktop -p 'test_*.py'
+          cargo test --workspace --locked
+
+      - name: Bangun paket lokal sebagai user runner
+        shell: bash
+        env:
+          EVIDENCE_ROOT: ${{ steps.paths.outputs.root }}
+        run: |
+          set -euo pipefail
+          bash packages/build-local.sh "$EVIDENCE_ROOT/packages"
+          bash packages/build-calamares.sh "$EVIDENCE_ROOT/calamares"
+
+      - name: Build ISO dan simpan identitas checkout serta checksum
+        shell: bash
+        env:
+          BUILD_DIR: ${{ steps.paths.outputs.build }}
+        run: |
+          set -euo pipefail
+          sudo -n bash tests/live/build.sh --output "$BUILD_DIR" \
+            --packages-dir "$(dirname -- "$BUILD_DIR")/packages" \
+            --calamares-dir "$(dirname -- "$BUILD_DIR")/calamares"
+
+      - name: Cold boot installer, desktop live, dan console sebagai user biasa
+        shell: bash
+        env:
+          BUILD_DIR: ${{ steps.paths.outputs.build }}
+          SMOKE_DIR: ${{ steps.paths.outputs.smoke }}
+        run: |
+          set -euo pipefail
+          iso=$(python3 -c 'import json, pathlib, sys; root = pathlib.Path(sys.argv[1]); data = json.loads((root / "build.json").read_text()); print(root / data["iso_filename"])' "$BUILD_DIR")
+          python3 tests/live/uefi_smoke.py \
+            --iso "$iso" \
+            --ovmf-code "$OVMF_CODE" \
+            --ovmf-vars "$OVMF_VARS" \
+            --build-evidence "$BUILD_DIR/build.json" \
+            --output "$SMOKE_DIR" \
+            --accelerator kvm \
+            --timeout 300
+
+      # Whitelist diagnostik: tidak mengunggah ISO, cache Archiso, atau salinan
+      # NVRAM/disk VM. Screenshot tetap perlu direview manual sebelum klaim UI.
+      - name: Simpan diagnostik meskipun build atau smoke gagal
+        if: always() && steps.paths.outputs.root != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-uefi-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            ${{ steps.paths.outputs.build }}/build.json
+            ${{ steps.paths.outputs.build }}/build.log
+            ${{ steps.paths.outputs.build }}/staging.log
+            ${{ steps.paths.outputs.build }}/host-packages.txt
+            ${{ steps.paths.outputs.build }}/source-status.txt
+            ${{ steps.paths.outputs.build }}/*.iso.sha256
+            ${{ steps.paths.outputs.build }}/local-packages.sha256
+            ${{ steps.paths.outputs.build }}/package-sources.sha256
+            ${{ steps.paths.outputs.build }}/installer-packages.sha256
+            ${{ steps.paths.outputs.build }}/installer-sources.sha256
+            ${{ steps.paths.outputs.smoke }}/**/*.json
+            ${{ steps.paths.outputs.smoke }}/**/*.log
+            ${{ steps.paths.outputs.smoke }}/**/*.txt
+            ${{ steps.paths.outputs.smoke }}/**/*.png
+            ${{ steps.paths.outputs.smoke }}/**/*.ppm
+            !${{ steps.paths.outputs.root }}/**/*.iso
+            !${{ steps.paths.outputs.root }}/**/work.*/**
+            !${{ steps.paths.outputs.root }}/**/cache/**
+            !${{ steps.paths.outputs.root }}/**/*.fd
+            !${{ steps.paths.outputs.root }}/**/*.qcow2
+            !${{ steps.paths.outputs.root }}/**/*.img
+            !${{ steps.paths.outputs.root }}/**/*.raw
+            !${{ steps.paths.outputs.root }}/**/*nvram*

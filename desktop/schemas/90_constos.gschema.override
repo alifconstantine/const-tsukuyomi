@@ -1,0 +1,9 @@
+# Defaults only: dconf preferences chosen by users retain precedence.
+[org.gnome.desktop.interface]
+color-scheme='prefer-dark'
+font-name='Noto Sans 10.5'
+monospace-font-name='JetBrainsMono Nerd Font 10.5'
+gtk-theme='Adwaita-dark'
+icon-theme='Papirus-Dark'
+cursor-theme='Adwaita'
+cursor-size=24

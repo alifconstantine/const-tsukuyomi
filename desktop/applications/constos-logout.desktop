@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Log Out and Power
+Name[id]=Keluar dan Daya
+Exec=wlogout
+TryExec=wlogout
+Icon=system-log-out
+Categories=System;
+Terminal=false

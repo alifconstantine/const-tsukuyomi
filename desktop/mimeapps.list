@@ -1,0 +1,24 @@
+[Default Applications]
+x-scheme-handler/http=firefox.desktop;
+x-scheme-handler/https=firefox.desktop;
+text/html=firefox.desktop;
+inode/directory=thunar.desktop;
+text/plain=org.xfce.mousepad.desktop;
+text/x-shellscript=org.xfce.mousepad.desktop;
+application/json=org.xfce.mousepad.desktop;
+application/xml=org.xfce.mousepad.desktop;
+text/xml=org.xfce.mousepad.desktop;
+image/png=org.xfce.ristretto.desktop;
+image/jpeg=org.xfce.ristretto.desktop;
+image/gif=org.xfce.ristretto.desktop;
+image/webp=org.xfce.ristretto.desktop;
+image/bmp=org.xfce.ristretto.desktop;
+image/tiff=org.xfce.ristretto.desktop;
+application/pdf=org.gnome.Evince.desktop;
+application/zip=org.gnome.FileRoller.desktop;
+application/x-7z-compressed=org.gnome.FileRoller.desktop;
+application/x-tar=org.gnome.FileRoller.desktop;
+application/gzip=org.gnome.FileRoller.desktop;
+application/x-xz=org.gnome.FileRoller.desktop;
+application/x-bzip2=org.gnome.FileRoller.desktop;
+application/x-compressed-tar=org.gnome.FileRoller.desktop;

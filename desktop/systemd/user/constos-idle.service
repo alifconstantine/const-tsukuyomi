@@ -1,0 +1,8 @@
+[Unit]
+Description=ConstOS idle
+PartOf=constos-session.target
+
+[Service]
+ExecStart=/usr/bin/swayidle -w timeout 300 '/usr/bin/constos-lock' before-sleep '/usr/bin/constos-lock'
+Restart=on-failure
+RestartSec=2

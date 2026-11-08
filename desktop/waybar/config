@@ -1,0 +1,64 @@
+{
+    "layer": "top",
+    "position": "top",
+    "height": 36,
+    "spacing": 4,
+    "modules-left": ["custom/launcher", "hyprland/workspaces"],
+    "modules-center": ["clock"],
+    "modules-right": ["network", "bluetooth", "wireplumber", "battery", "custom/screenshot", "tray", "custom/power"],
+    "custom/launcher": {
+        "format": "Aplikasi",
+        "tooltip-format": "Buka aplikasi · Super+Space",
+        "on-click": "wofi --show drun"
+    },
+    "hyprland/workspaces": {
+        "format": "{name}",
+        "sort-by-number": true,
+        "all-outputs": false
+    },
+    "clock": {
+        "format": "{:%a %d %b · %H:%M}",
+        "tooltip-format": "<tt>{calendar}</tt>"
+    },
+    "network": {
+        "format-wifi": "Wi-Fi {signalStrength}%",
+        "format-ethernet": "Ethernet",
+        "format-disconnected": "Jaringan putus",
+        "tooltip-format": "{ifname} · {ipaddr}/{cidr}",
+        "tooltip-format-wifi": "{essid} · {signalStrength}%\n{ipaddr}/{cidr}",
+        "on-click": "nm-connection-editor"
+    },
+    "bluetooth": {
+        "format": "Bluetooth",
+        "format-disabled": "Bluetooth mati",
+        "format-connected": "Bluetooth {num_connections}",
+        "tooltip-format": "{controller_alias}",
+        "on-click": "blueman-manager"
+    },
+    "wireplumber": {
+        "format": "Audio {volume}%",
+        "format-muted": "Audio bisu",
+        "scroll-step": 5,
+        "on-click": "pavucontrol",
+        "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+    },
+    "battery": {
+        "states": {"warning": 30, "critical": 15},
+        "format": "Baterai {capacity}%",
+        "format-charging": "Mengisi {capacity}%",
+        "format-plugged": "Daya AC {capacity}%",
+        "tooltip-format": "{timeTo}"
+    },
+    "custom/screenshot": {
+        "format": "Screenshot",
+        "tooltip-format": "Klik: pilih area · Klik kanan: seluruh desktop",
+        "on-click": "constos-screenshot region",
+        "on-click-right": "constos-screenshot screen"
+    },
+    "tray": {"spacing": 8},
+    "custom/power": {
+        "format": "Keluar",
+        "tooltip-format": "Kunci, keluar, matikan, atau mulai ulang",
+        "on-click": "wlogout"
+    }
+}

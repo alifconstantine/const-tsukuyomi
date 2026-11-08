@@ -1,0 +1,30 @@
+# Maintainer: ConstOS
+pkgname=constos-desktop
+pkgver=0.1.0
+pkgrel=2
+pkgdesc='ConstOS Hyprland desktop, session and installed boot themes'
+arch=('any')
+url='https://github.com/alifconstantine/const-tsukuyomi'
+license=('custom')
+install=constos-desktop.install
+depends=(
+  'constos-core' 'hyprland' 'sddm' 'plymouth' 'grub'
+  'qt6-declarative' 'qt6-svg' 'qt6-5compat' 'xorg-server' 'xorg-xauth'
+  'foot' 'waybar' 'wofi' 'mako' 'swaylock' 'swayidle' 'wlogout' 'swaybg'
+  'grim' 'slurp' 'wl-clipboard' 'brightnessctl' 'pipewire' 'pipewire-alsa' 'pipewire-pulse' 'wireplumber'
+  'xdg-desktop-portal' 'xdg-desktop-portal-hyprland' 'xdg-desktop-portal-gtk'
+  'polkit-gnome' 'network-manager-applet' 'nm-connection-editor' 'pavucontrol'
+  'thunar' 'thunar-archive-plugin' 'thunar-volman' 'tumbler' 'gvfs' 'udisks2'
+  'bluez' 'bluez-utils' 'blueman' 'firefox' 'mousepad' 'ristretto' 'evince' 'file-roller'
+  'libnotify' 'xdg-user-dirs' 'xdg-utils' 'gsettings-desktop-schemas' 'adwaita-cursors'
+  'gtk4' 'python-gobject' 'flatpak'
+  'papirus-icon-theme' 'adwaita-icon-theme' 'noto-fonts' 'noto-fonts-emoji' 'ttf-jetbrains-mono-nerd'
+)
+source=('constos-sources.tar')
+sha256sums=("${CONSTOS_SOURCE_SHA256:?Build with packages/build-local.sh}")
+
+package() {
+  local tree="$srcdir/constos"
+  bash "$tree/desktop/install.sh" "$pkgdir" installed
+  bash "$tree/iso/install-boot.sh" "$pkgdir" installed
+}

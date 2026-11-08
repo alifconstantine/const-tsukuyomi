@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if (( EUID == 0 )); then
+  exec /usr/lib/constos-installer/backend.py
+fi
+# Hanya ada di ISO. Backend memeriksa identitas live, UID, dan socket sesi;
+# target tidak memasang launcher ataupun kebijakan sudo khusus live.
+exec sudo -n /usr/lib/constos-installer/backend.py "${WAYLAND_DISPLAY:?Jalankan dari sesi Wayland live}"

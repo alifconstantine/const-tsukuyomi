@@ -1,0 +1,11 @@
+[package]
+name = "constd"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Kernel and hardware monitoring daemon for ConstOS"
+
+[dependencies]
+const-collector = { path = "../const-collector" }
+serde = { workspace = true }
+serde_json = { workspace = true }

@@ -1,0 +1,7 @@
+self-hosted-runner:
+  labels:
+    - constos-build
+
+config-variables:
+  - CONSTOS_OVMF_CODE
+  - CONSTOS_OVMF_VARS

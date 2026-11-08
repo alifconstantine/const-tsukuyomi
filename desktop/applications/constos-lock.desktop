@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Lock Screen
+Name[id]=Kunci Layar
+Exec=constos-lock
+TryExec=constos-lock
+Icon=system-lock-screen
+Categories=System;
+Terminal=false

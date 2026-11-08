@@ -1,0 +1,24 @@
+{
+    "label": "lock",
+    "action": "constos-lock",
+    "text": "Kunci Layar",
+    "keybind": "l"
+}
+{
+    "label": "logout",
+    "action": "hyprctl dispatch 'hl.dsp.exit()'",
+    "text": "Keluar Sesi",
+    "keybind": "e"
+}
+{
+    "label": "shutdown",
+    "action": "systemctl poweroff",
+    "text": "Matikan",
+    "keybind": "s"
+}
+{
+    "label": "reboot",
+    "action": "systemctl reboot",
+    "text": "Mulai Ulang",
+    "keybind": "r"
+}

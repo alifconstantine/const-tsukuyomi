@@ -1,0 +1,9 @@
+show=drun
+allow_images=true
+hide_scroll=false
+no_actions=false
+term=foot
+width=600
+height=460
+prompt=Cari aplikasi
+insensitive=true

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Install ConstOS
+Name[id]=Pasang ConstOS
+Comment=Online UEFI installation to a confirmed empty disk
+Comment[id]=Instalasi online UEFI ke disk kosong yang dikonfirmasi
+Exec=constos-install
+Icon=constos
+Terminal=false
+Categories=System;
+StartupNotify=true

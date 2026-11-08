@@ -1,0 +1,9 @@
+post_install() {
+  # Jangan regenerasi initramfs di tengah transaksi; installer melakukannya
+  # setelah akun, fstab, dan seluruh konfigurasi target selesai.
+  plymouth-set-default-theme constos
+}
+
+post_upgrade() {
+  post_install
+}

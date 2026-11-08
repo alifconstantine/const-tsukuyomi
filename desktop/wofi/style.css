@@ -1,0 +1,24 @@
+@import "../constos/theme.css";
+
+* { font-family: "Noto Sans", sans-serif; font-size: 14px; }
+window {
+    background: @surface;
+    color: @text;
+    border: 1px solid @control_border;
+    border-radius: 10px;
+}
+#outer-box { padding: 12px; }
+#input {
+    padding: 10px;
+    margin-bottom: 12px;
+    background: @surface_raised;
+    color: @text;
+    border: 2px solid @accent;
+    border-radius: 6px;
+}
+#scroll { margin-top: 4px; }
+#entry { padding: 8px; border-radius: 6px; }
+#entry:hover { background: @surface_hover; }
+#entry:selected { background: @accent_surface; border-left: 2px solid @accent; }
+#text { color: @text; margin: 0 8px; }
+#img { margin-right: 8px; }

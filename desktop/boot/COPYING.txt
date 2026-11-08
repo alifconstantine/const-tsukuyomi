@@ -1,0 +1,18 @@
+Sumber identitas boot ConstOS
+
+Logo resmi memakai simbol Const yang dipilih pemilik proyek, digambar ulang
+sebagai path dalam assets/const-logo.svg dari raster logo Const yang sudah ada.
+GRUB/Plymouth memakai ekspor PNG transparan; SDDM dan installer memakai SVG.
+Asal, ekspor, serta status izin dicatat di assets/manifest.json.
+Pemilihan oleh pengguna bukan bukti lisensi redistribusi aset asal; audit
+hak merek/aset tetap diperlukan sebelum publikasi distro.
+
+Kode tema GRUB, Plymouth, dan SDDM dalam direktori ini ditulis khusus untuk
+ConstOS; API merujuk dokumentasi upstream GRUB, Plymouth script plugin, dan
+SDDM. Tidak menyalin kode tema pihak ketiga. Font runtime
+Noto Sans berasal dari paket noto-fonts dengan lisensi paketnya sendiri.
+
+Sumber API:
+https://www.gnu.org/software/grub/manual/grub/html_node/Theme-file-format.html
+https://www.freedesktop.org/wiki/Software/Plymouth/Scripts/
+https://github.com/sddm/sddm/blob/develop/docs/THEMING.md

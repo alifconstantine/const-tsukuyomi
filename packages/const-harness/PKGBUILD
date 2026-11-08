@@ -1,0 +1,49 @@
+# Maintainer: ConstOS Project Team <https://github.com/alifconstantine/const-tsukuyomi>
+pkgname=const-harness-desktop
+pkgver=0.0.2
+pkgrel=1
+pkgdesc="Const Harness AI Desktop Workbench - Integrated System Agent for ConstOS"
+arch=('x86_64')
+url="https://github.com/alifconstantine/const-tsukuyomi"
+license=('GPL3')
+depends=(
+  'gtk3'
+  'nss'
+  'alsa-lib'
+  'libxss'
+  'bubblewrap'
+  'socat'
+)
+makedepends=(
+  'nodejs>=20'
+  'pnpm'
+)
+provides=('const-harness')
+conflicts=('const-harness-git')
+
+package() {
+  # Instalasi binary hasil build pnpm package:linux:pacman
+  mkdir -p "${pkgdir}/usr/bin"
+  mkdir -p "${pkgdir}/usr/share/applications"
+  mkdir -p "${pkgdir}/usr/share/icons/hicolor/512x512/apps"
+
+  # Entry point shortcut
+  cat << 'EOF' > "${pkgdir}/usr/bin/const-harness-desktop"
+#!/usr/bin/env bash
+exec /opt/ConstHarness/const-harness-desktop "$@"
+EOF
+  chmod 755 "${pkgdir}/usr/bin/const-harness-desktop"
+
+  # Desktop file
+  cat << 'EOF' > "${pkgdir}/usr/share/applications/const-harness.desktop"
+[Desktop Entry]
+Name=Const Harness
+Comment=AI Desktop Workbench for Developers & Students
+Exec=const-harness-desktop %U
+Terminal=false
+Type=Application
+Icon=const-harness
+Categories=Development;Utility;System;
+StartupWMClass=Const-Harness
+EOF
+}

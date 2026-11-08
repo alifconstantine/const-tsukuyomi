@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# SDDM owns the login; this wrapper owns only the ConstOS graphical session.
+set -euo pipefail
+: "${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR is required}"
+exec 9>"$XDG_RUNTIME_DIR/constos-session.lock"
+if ! flock -n 9; then
+    printf 'ConstOS: a graphical session is already running for this user.\n' >&2
+    exit 1
+fi
+export XDG_CURRENT_DESKTOP=Hyprland
+export XDG_SESSION_DESKTOP=constos
+export XDG_SESSION_TYPE=wayland
+cleanup() {
+    systemctl --user stop constos-session.target || true
+    systemctl --user stop xdg-desktop-portal.service xdg-desktop-portal-hyprland.service xdg-desktop-portal-gtk.service || true
+    systemctl --user unset-environment WAYLAND_DISPLAY DISPLAY HYPRLAND_INSTANCE_SIGNATURE XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE || true
+}
+trap cleanup EXIT
+Hyprland "$@" 9>&- &
+compositor=$!
+trap 'kill -TERM "$compositor" 2>/dev/null || true' HUP INT TERM
+status=0
+wait "$compositor" || status=$?
+exit "$status"

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Aplikasi Pilihan
+Comment=Pasang aplikasi pilihan dari Flathub
+Exec=/usr/lib/constos/welcome/welcome.py --apps
+Icon=system-software-install
+Terminal=false
+Categories=System;

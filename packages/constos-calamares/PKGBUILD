@@ -1,0 +1,85 @@
+# Sumber CachyOS yang juga dipakai resep cachyos-calamares-next, dipatok ke commit.
+# CMake sumber ini menyatakan 3.4.1/API 3.4; jangan mengganti versi menjadi 3.4.2.
+pkgname=constos-calamares
+pkgver=3.4.1
+pkgrel=1
+pkgdesc='Calamares Qt6 dengan modul installer ConstOS'
+arch=('x86_64')
+url='https://github.com/CachyOS/cachyos-calamares'
+license=('GPL-3.0-or-later')
+provides=("calamares=$pkgver")
+conflicts=('calamares' 'cachyos-calamares' 'cachyos-calamares-next')
+depends=(
+  'ckbcomp'
+  'glibc'
+  'icu'
+  'kcoreaddons'
+  'libgcc'
+  'libstdc++'
+  'libpwquality'
+  'libxcrypt'
+  # makepkg mengisi versi SONAME dari library hasil link, bukan versi yang ditebak.
+  # boost-libs menyediakan nama ini; perubahan Boost memerlukan rebuild paket.
+  'libboost_python314.so'
+  'polkit-qt6'
+  'python>=3.14'
+  'python<3.15'
+  'qt6-base'
+  'qt6-declarative'
+  'qt6-svg'
+  'qt6-wayland'
+  'xkeyboard-config'
+  'yaml-cpp'
+)
+makedepends=('boost' 'cmake' 'extra-cmake-modules' 'ninja' 'qt6-tools')
+options=('!debug' '!emptydirs')
+_commit=199d71543db805fac2cc649ced72ad01dcb2c362
+source=("calamares-$_commit.tar.gz::https://codeload.github.com/CachyOS/cachyos-calamares/tar.gz/$_commit"
+        'qt-widgets.patch')
+sha256sums=('4670ed9b5fe9e185437fdb0a65638329b8b727973d6f4f7f1992d5bc33a593db'
+            'bc346dbdc3c39dc08b091309f5621b1c0ebcd67108aaddb436c33d9212c08731')
+
+prepare() {
+  patch -d "$srcdir/cachyos-calamares-$_commit" -p1 < "$srcdir/qt-widgets.patch"
+}
+
+build() {
+  # Hanya modul sequence installer/settings.conf. Storage/bootstrap/finalize
+  # dimiliki backend ConstOS, bukan partition/pacstrap/bootloader upstream.
+  local skip_modules='bootloader chwd contextualprocess displaymanager dracut dracutlukscfg
+    dummycpp dummyprocess dummypython finishedq fsresizer fstab grubcfg hostinfo
+    initcpio initcpiocfg initramfs initramfscfg interactiveterminal keyboardq license
+    localeq luksbootkeyfile luksopenswaphookcfg mkinitfs mount netinstall networkcfg
+    notesqml oemid openrcdmcryptcfg packagechooser packagechooserq packages pacstrap
+    partition plasmalnf plymouthcfg preservefiles rawfs removeuser services-openrc
+    services-systemd shellprocess summaryq tracking umount unpackfs unpackfsc usersq
+    welcomeq zfs zfshostid'
+  # CMake menerima spasi/titik koma; ubah newline/indent menjadi pemisah spasi.
+  skip_modules=${skip_modules//$'\n'/ }
+  cmake -S "$srcdir/cachyos-calamares-$_commit" -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=lib \
+    -DCMAKE_INSTALL_SYSCONFDIR=/etc \
+    -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+    -DCMAKE_DISABLE_FIND_PACKAGE_KPMcore=ON \
+    -DCMAKE_DISABLE_FIND_PACKAGE_LIBPARTED=ON \
+    -DBUILD_TESTING=OFF \
+    -DBUILD_SCHEMA_TESTING=OFF \
+    -DBUILD_CRASH_REPORTING=OFF \
+    -DINSTALL_CONFIG=OFF \
+    -DINSTALL_POLKIT=ON \
+    -DWITH_QT6=ON \
+    -DWITH_QML=ON \
+    -DWITH_PYTHON=ON \
+    -DWITH_PYBIND11=OFF \
+    -DBOOSTPYTHON_COMPONENT=python314 \
+    -DSKIP_MODULES="$skip_modules"
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+  # Launcher/settings/branding hanya dari installer/install.sh milik ConstOS.
+  rm -- "$pkgdir/usr/share/applications/calamares.desktop"
+}

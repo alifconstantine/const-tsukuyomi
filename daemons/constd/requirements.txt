@@ -1,0 +1,4 @@
+# constd - Minimal python requirements
+# Hanya menggunakan standard library Python 3 (os, sys, json, time, http.server)
+# Paket opsional untuk inspeksi diperluas:
+psutil>=5.9.0

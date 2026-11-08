@@ -1,0 +1,23 @@
+# Static export of design.md vendor tokens; never shows notifications/media.
+font=Noto Sans
+font-size=14
+color=161616
+indicator-radius=80
+indicator-thickness=6
+ring-color=808080
+ring-ver-color=60a5fa
+ring-wrong-color=f87171
+key-hl-color=60a5fa
+bs-hl-color=fbbf24
+line-color=161616
+separator-color=383838
+inside-color=1e1e1e
+inside-ver-color=20324a
+inside-wrong-color=1e1e1e
+layout-bg-color=1e1e1e
+layout-border-color=808080
+layout-text-color=f5f5f5
+text-color=f5f5f5
+text-ver-color=f5f5f5
+text-wrong-color=f87171
+show-failed-attempts

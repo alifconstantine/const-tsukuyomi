@@ -1,0 +1,39 @@
+#!/bin/sh
+# Tema opsional, terpisah dari entry kernel yang dibuat 10_linux upstream.
+set -e
+. /usr/share/grub/grub-mkconfig_lib
+
+theme=/usr/share/grub/themes/constos/theme.txt
+cat <<'EOF'
+set timeout_style=menu
+set timeout=5
+set color_normal=light-gray/black
+set color_highlight=black/light-blue
+terminal_input console
+terminal_output console
+EOF
+
+if [ -f "$theme" ]; then
+    theme_path=$(make_system_path_relative_to_its_root "$theme")
+    logo_path=$(make_system_path_relative_to_its_root "${theme%/*}/logo.png")
+    prepare_grub_to_access_device "$(grub-probe --target=device "$theme")"
+    cat <<EOF
+if [ -f "(\$root)$theme_path" -a -f "(\$root)$logo_path" ]; then
+    if loadfont "\$prefix/fonts/unicode.pf2"; then
+        if insmod all_video; then
+            if insmod gfxterm; then
+                if insmod gfxmenu; then
+                    if insmod png; then
+                        set gfxmode=auto
+                        if terminal_output gfxterm; then
+                            set theme="(\$root)$theme_path"
+                            export theme
+                        fi
+                    fi
+                fi
+            fi
+        fi
+    fi
+fi
+EOF
+fi

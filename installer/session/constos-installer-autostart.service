@@ -1,0 +1,9 @@
+[Unit]
+Description=Buka installer ConstOS dari entri Instal ConstOS
+PartOf=constos-session.target
+ConditionKernelCommandLine=constos.install
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/constos-install
+RemainAfterExit=yes
