@@ -63,7 +63,7 @@ flowchart TD
 
 Collector membaca data Linux sebagai pengguna biasa dan memberi hasil bertipe beserta status unavailable/error. CLI, Monitor, widget, dan Harness memakai kontrak metrik yang sama. D-Bus sesi menjadi arah integrasi stream UI; schema, versi, resync, dan lifecycle ditetapkan ketika implementasi dibuat.
 
-`const doctor` bekerja sebagai proses baca-saja di akun pengguna pada target terpasang. Ia memakai collector untuk identitas kernel, `/proc/swaps` untuk swap aktif, `systemctl` untuk daftar unit sistem yang gagal, dan metadata berkas untuk keberadaan konfigurasi Snapper. Pemeriksaan tidak memerlukan daemon Rust, layanan jaringan, atau elevasi.
+`const doctor` bekerja sebagai proses baca-saja di akun pengguna pada target terpasang. Ia memakai collector untuk identitas kernel, `/proc/swaps` untuk swap aktif, dan `systemctl` untuk daftar unit sistem yang gagal. Pemeriksaan storage membaca ruang yang tersedia di `/` melalui `df`, metadata konfigurasi root Snapper, dan status mount `/.snapshots` dari `/proc/self/mountinfo`. Pemeriksaan tidak memerlukan daemon Rust, layanan jaringan, atau elevasi.
 
 `const update` berjalan dari terminal interaktif di target terpasang. Setelah memeriksa identitas sistem dan penanda boot live, proses CLI menyerahkan terminal ke `sudo` dan `pacman -Syu`, sehingga status keluar diteruskan langsung. Otorisasi mengikuti kebijakan `sudo` pada target. Konfirmasi, lock transaksi, validasi paket, dan konfigurasi repo tetap milik pacman.
 

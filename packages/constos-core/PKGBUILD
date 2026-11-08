@@ -1,7 +1,7 @@
 # Maintainer: ConstOS
 pkgname=constos-core
 pkgver=0.1.0
-pkgrel=5
+pkgrel=6
 pkgdesc='ConstOS installed-system identity, vendor policy, and maintenance CLI'
 arch=('x86_64')
 url='https://github.com/alifconstantine/const-tsukuyomi'

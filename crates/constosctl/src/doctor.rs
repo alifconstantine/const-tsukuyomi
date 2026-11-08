@@ -1,8 +1,11 @@
 use std::fs;
 use std::io::ErrorKind;
+use std::path::Path;
 use std::process::Command;
 
 use const_collector::Collector;
+
+use crate::format_bytes;
 
 #[derive(Debug)]
 enum Status {
@@ -38,7 +41,7 @@ fn check_zram(collector: &Collector) -> Check {
             return (
                 Status::Unknown,
                 format!("Could not read /proc/swaps ({error})"),
-            )
+            );
         }
     };
     let mut lines = swaps.lines();
@@ -54,10 +57,7 @@ fn check_zram(collector: &Collector) -> Check {
         })
         .collect();
     if devices.is_empty() {
-        return (
-            Status::Fail,
-            "No ZRAM device is active as swap".into(),
-        );
+        return (Status::Fail, "No ZRAM device is active as swap".into());
     }
     (Status::Pass, devices.join(", "))
 }
@@ -80,7 +80,7 @@ fn check_systemd() -> Check {
             return (
                 Status::Unknown,
                 format!("Could not run systemctl ({error})"),
-            )
+            );
         }
     };
     if !output.status.success() {
@@ -103,16 +103,79 @@ fn check_systemd() -> Check {
     )
 }
 
-fn check_snapper() -> Check {
+fn check_disk_space() -> Check {
+    let output = match Command::new("df")
+        .args(["--block-size=1", "--output=avail", "--", "/"])
+        .env("LC_ALL", "C")
+        .output()
+    {
+        Ok(output) => output,
+        Err(error) => return (Status::Unknown, format!("Could not run df ({error})")),
+    };
+    if !output.status.success() {
+        return (Status::Unknown, format!("df failed ({})", output.status));
+    }
+
+    match String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .nth(1)
+        .and_then(|line| line.trim().parse::<i64>().ok())
+    {
+        Some(..=0) => (Status::Fail, "No space available on /".into()),
+        Some(bytes) => (
+            Status::Pass,
+            format!("{} available on /", format_bytes(bytes as u64)),
+        ),
+        None => (
+            Status::Unknown,
+            "Could not read available space on /".into(),
+        ),
+    }
+}
+
+fn check_snapshot_mount(mountinfo: &Path) -> Check {
+    let mounts = match fs::read(mountinfo) {
+        Ok(mounts) => mounts,
+        Err(error) => {
+            return (
+                Status::Unknown,
+                format!("Could not read mount information ({error})"),
+            );
+        }
+    };
+
+    let mut root_seen = false;
+    for target in String::from_utf8_lossy(&mounts)
+        .lines()
+        .filter_map(|line| line.split_ascii_whitespace().nth(4))
+    {
+        match target {
+            "/.snapshots" => {
+                return (
+                    Status::Pass,
+                    "Root configuration found and /.snapshots is mounted".into(),
+                );
+            }
+            "/" => root_seen = true,
+            _ => {}
+        }
+    }
+    if root_seen {
+        (Status::Fail, "/.snapshots is not mounted".into())
+    } else {
+        (Status::Unknown, "Could not identify the root mount".into())
+    }
+}
+
+fn check_snapper(collector: &Collector) -> Check {
     match fs::metadata("/etc/snapper/configs/root") {
         Ok(metadata) if metadata.is_file() => {
-            (Status::Pass, "Root configuration file is present".into())
+            check_snapshot_mount(&collector.proc_path.join("self/mountinfo"))
         }
         Ok(_) => (Status::Fail, "Root configuration path is not a file".into()),
-        Err(error) if error.kind() == ErrorKind::NotFound => (
-            Status::Fail,
-            "Root configuration file not found".into(),
-        ),
+        Err(error) if error.kind() == ErrorKind::NotFound => {
+            (Status::Fail, "Root configuration file not found".into())
+        }
         Err(error) => (
             Status::Unknown,
             format!("Could not inspect the root configuration ({error})"),
@@ -127,7 +190,8 @@ pub fn run() -> i32 {
         ("Kernel", check_kernel(&collector)),
         ("ZRAM swap", check_zram(&collector)),
         ("systemd services", check_systemd()),
-        ("Snapper", check_snapper()),
+        ("Disk space", check_disk_space()),
+        ("Snapper", check_snapper(&collector)),
     ];
     let mut exit_code = 0;
     for (name, (status, detail)) in checks {
@@ -143,4 +207,28 @@ pub fn run() -> i32 {
         println!("[{label}] {name} · {detail}");
     }
     exit_code
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn snapper_requires_the_exact_mountpoint() {
+        let fixture = tempfile::tempdir().unwrap();
+        let mountinfo = fixture.path().join("mountinfo");
+        assert!(matches!(
+            check_snapshot_mount(&mountinfo).0,
+            Status::Unknown
+        ));
+
+        let root = "25 1 0:23 /@ / rw - btrfs /dev/vda2 rw\n";
+        let child = "26 25 0:23 /@snapshots/1 /.snapshots/1 rw - btrfs /dev/vda2 rw\n";
+        fs::write(&mountinfo, format!("{root}{child}")).unwrap();
+        assert!(matches!(check_snapshot_mount(&mountinfo).0, Status::Fail));
+
+        let snapshots = "27 25 0:23 /@snapshots /.snapshots rw - btrfs /dev/vda2 rw\n";
+        fs::write(&mountinfo, format!("{root}{snapshots}")).unwrap();
+        assert!(matches!(check_snapshot_mount(&mountinfo).0, Status::Pass));
+    }
 }

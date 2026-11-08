@@ -7,7 +7,7 @@ fn update_requires_an_interactive_terminal() {
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(1));
-    assert!(String::from_utf8_lossy(&output.stderr).contains("terminal interaktif"));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("interactive terminal"));
 }
 
 #[test]

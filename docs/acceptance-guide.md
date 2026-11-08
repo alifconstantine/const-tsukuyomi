@@ -127,9 +127,9 @@ Setelah integrasi kompatibilitas tersedia, lanjutkan dengan [skenario penerimaan
 
 ## ConstOS Doctor
 
-Di sistem terpasang, jalankan `const doctor` sebagai pengguna biasa dari terminal desktop dan TTY. Bandingkan hasil dengan `uname -r`, `/proc/swaps`, `systemctl --failed`, dan keberadaan `/etc/snapper/configs/root`. `WARN` mencatat kondisi yang perlu diperhatikan, seperti penanda BORE yang tidak ditemukan. `FAIL` melaporkan temuan seperti unit gagal. `UNKNOWN` berarti pemeriksaan tidak selesai. Exit status `1` berarti ada `FAIL` atau `UNKNOWN`; exit status `0` berarti tidak ada keduanya.
+Di sistem terpasang, jalankan `const doctor` sebagai pengguna biasa dari terminal desktop dan TTY. Bandingkan hasil dengan `uname -r`, `/proc/swaps`, `systemctl --failed`, keberadaan `/etc/snapper/configs/root`, `df -h /`, dan `findmnt --mountpoint /.snapshots`. `WARN` mencatat kondisi seperti penanda BORE yang tidak ditemukan. `FAIL` melaporkan temuan seperti unit gagal, ruang tersedia di `/` habis, atau `/.snapshots` tidak ter-mount. `UNKNOWN` berarti pemeriksaan tidak selesai. Doctor mengembalikan exit status `1` jika ada `FAIL` atau `UNKNOWN` dan `0` jika keduanya absen.
 
-Untuk menguji kegagalan pada VM disposable, jalankan `sudo systemd-run --unit=constos-doctor-qa --wait /usr/bin/false`, lalu jalankan kembali `const doctor` tanpa `sudo`. Pastikan laporan menyebut `constos-doctor-qa.service` dan exit status `1`. Bersihkan unit uji dengan `sudo systemctl reset-failed constos-doctor-qa.service`. Pemeriksaan konfigurasi Snapper sebatas keberadaan berkas. Uji recovery mengikuti skenario di bawah.
+Untuk menguji kegagalan pada VM disposable, jalankan `sudo systemd-run --unit=constos-doctor-qa --wait /usr/bin/false`, lalu jalankan kembali `const doctor` tanpa `sudo`. Pastikan laporan menyebut `constos-doctor-qa.service` dan exit status `1`. Bersihkan unit uji dengan `sudo systemctl reset-failed constos-doctor-qa.service`. Penerimaan restore file dan rollback tetap mengikuti skenario recovery di bawah.
 
 ## Update dan recovery
 
