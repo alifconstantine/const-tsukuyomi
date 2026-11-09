@@ -1,0 +1,697 @@
+Subject: [ConstOS] Review, installation stages and disk boot handoff
+
+Adapt the native Widgets pages while keeping the Calamares job queue
+as the source of installation state.
+
+--- a/src/libcalamaresui/ViewManager.h
++++ b/src/libcalamaresui/ViewManager.h
+@@ -258,6 +258,7 @@
+     QWidget* m_widget;
+     QStackedWidget* m_stack;
+ 
++    bool m_installationFailed = false;
+     bool m_nextEnabled = false;
+     QString m_nextLabel;
+     QString m_nextIcon;  ///< Name of icon to show on button
+--- a/src/libcalamaresui/ViewManager.cpp
++++ b/src/libcalamaresui/ViewManager.cpp
+@@ -89,7 +89,12 @@
+     updateButtonLabels();
+ 
+     connect( JobQueue::instance(), &JobQueue::failed, this, &ViewManager::onInstallationFailed );
+-    connect( JobQueue::instance(), &JobQueue::finished, this, &ViewManager::next );
++    connect( JobQueue::instance(), &JobQueue::finished, this, [this] {
++        if ( !m_installationFailed )
++        {
++            next();
++        }
++    } );
+ 
+     CALAMARES_RETRANSLATE_SLOT( &ViewManager::updateButtonLabels );
+ 
+@@ -154,6 +159,7 @@
+ void
+ ViewManager::onInstallationFailed( const QString& message, const QString& details )
+ {
++    m_installationFailed = true;
+     cError() << "Installation failed:" << message;
+     cDebug() << Logger::SubEntry << "- message:" << message;
+     cDebug() << Logger::SubEntry << "- details:" << Logger::NoQuote << details;
+@@ -405,7 +411,7 @@
+ {
+     const auto* const settings = Calamares::Settings::instance();
+ 
+-    QString nextIsInstallationStep = settings->isSetupMode() ? tr( "&Set Up", "@button" ) : tr( "&Install", "@button" );
++    QString nextIsInstallationStep = settings->isSetupMode() ? tr( "&Set Up", "@button" ) : tr( "&Install ConstOS", "@button" );
+     QString quitOnCompleteTooltip = settings->isSetupMode()
+         ? tr( "Setup is complete. Close the setup program.", "@tooltip" )
+         : tr( "The installation is complete. Close the installer.", "@tooltip" );
+@@ -421,7 +427,7 @@
+     }
+     else
+     {
+-        UPDATE_BUTTON_PROPERTY( nextLabel, tr( "&Next", "@button" ) );
++        UPDATE_BUTTON_PROPERTY( nextLabel, tr( "Conti&nue", "@button" ) );
+         UPDATE_BUTTON_PROPERTY( nextIcon, "go-next" );
+     }
+ 
+--- a/src/modules/summary/Config.cpp
++++ b/src/modules/summary/Config.cpp
+@@ -32,7 +32,7 @@
+ void
+ Config::retranslate()
+ {
+-    m_title = tr( "Summary", "@label" );
++    m_title = tr( "Review", "@label" );
+ 
+     if ( Calamares::Settings::instance()->isSetupMode() )
+     {
+@@ -41,8 +41,7 @@
+     }
+     else
+     {
+-        m_message = tr( "This is an overview of what will happen once you start "
+-                        "the install procedure." );
++        m_message = tr( "ConstOS will use the entire disk shown below. Firefox is included in this build. Select Install ConstOS to begin." );
+     }
+     Q_EMIT titleChanged( m_title );
+     Q_EMIT messageChanged( m_message );
+--- a/src/modules/summary/SummaryPage.cpp
++++ b/src/modules/summary/SummaryPage.cpp
+@@ -26,6 +26,7 @@
+ #include <QBoxLayout>
+ #include <QLabel>
+ #include <QScrollArea>
++#include <QPushButton>
+ 
+ SummaryPage::SummaryPage( Config* config, QWidget* parent )
+     : QWidget()
+@@ -41,6 +42,7 @@
+ 
+     QLabel* headerLabel = new QLabel( this );
+     headerLabel->setObjectName( "summaryTitle" );
++    headerLabel->setWordWrap( true );
+     headerLabel->setText( config->message() );
+     connect( config, &Config::messageChanged, headerLabel, &QLabel::setText );
+     layout->addWidget( headerLabel );
+@@ -74,6 +76,7 @@
+     label->setMargin( Calamares::defaultFontHeight() / 2 );
+     label->setAutoFillBackground( true );
+     label->setPalette( bodyPalette );
++    label->setWordWrap( true );
+     label->setText( text );
+     return label;
+ }
+@@ -133,8 +136,8 @@
+     Calamares::unmarginLayout( m_layout );
+ 
+     QFont titleFont = font();
+-    titleFont.setWeight( QFont::Light );
+-    titleFont.setPointSize( Calamares::defaultFontSize() * 2 );
++    titleFont.setWeight( QFont::DemiBold );
++    titleFont.setPointSize( Calamares::defaultFontSize() * 1.25 );
+ 
+     QPalette bodyPalette( palette() );
+     bodyPalette.setColor( WindowBackground, palette().window().color().lighter( 108 ) );
+@@ -159,7 +162,23 @@
+             m_layout->addSpacing( SECTION_SPACING );
+         }
+ 
+-        m_layout->addWidget( createTitleLabel( title, titleFont ) );
++        auto* header = new QHBoxLayout;
++        header->addWidget( createTitleLabel( title, titleFont ), 1 );
++        auto* edit = new QPushButton( tr( "Edit" ), m_contentWidget );
++        edit->setAccessibleName( tr( "Edit %1" ).arg( title ) );
++        const auto stepIndex = model->data( rowIndex, SummaryModel::StepIndexRole ).toInt();
++        connect( edit, &QPushButton::clicked, this, [stepIndex] {
++            auto* manager = Calamares::ViewManager::instance();
++            while ( manager->currentStepIndex() > stepIndex )
++            {
++                const auto current = manager->currentStepIndex();
++                manager->back();
++                if ( manager->currentStepIndex() == current )
++                    break;
++            }
++        } );
++        header->addWidget( edit );
++        m_layout->addLayout( header );
+         m_layout->addWidget( createStepWidget( text, widget, bodyPalette ) );
+     }
+     m_layout->addStretch();
+--- a/src/modules/summary/SummaryModel.h
++++ b/src/modules/summary/SummaryModel.h
+@@ -29,6 +29,7 @@
+     QString title;
+     QString message;
+     QWidget* widget = nullptr;
++    int stepIndex;
+ };
+ 
+ class SummaryModel : public QAbstractListModel
+@@ -42,6 +43,7 @@
+         TitleRole = Qt::DisplayRole,  // Name of the step
+         MessageRole = Qt::UserRole,  // String saying what it will do
+         WidgetRole,  // Pointer to widget
++        StepIndexRole,
+     };
+ 
+     explicit SummaryModel( QObject* parent = nullptr );
+--- a/src/modules/summary/SummaryModel.cpp
++++ b/src/modules/summary/SummaryModel.cpp
+@@ -9,6 +9,7 @@
+  */
+ 
+ #include "SummaryModel.h"
++#include "ViewManager.h"
+ 
+ #include <QWidget>
+ 
+@@ -41,6 +42,8 @@
+         return item.message;
+     case WidgetRole:
+         return item.widget ? QVariant::fromValue( item.widget ) : QVariant();
++    case StepIndexRole:
++        return item.stepIndex;
+     default:
+         return QVariant();
+     }
+@@ -68,7 +71,8 @@
+             continue;
+         }
+ 
+-        m_summary << StepSummary { step->prettyName(), text, widget };
++        const auto stepIndex = Calamares::ViewManager::instance()->viewSteps().indexOf( step );
++        m_summary << StepSummary { step->prettyName(), text, widget, static_cast<int>( stepIndex ) };
+     }
+     endResetModel();
+ }
+--- a/src/modules/users/UsersViewStep.h
++++ b/src/modules/users/UsersViewStep.h
+@@ -30,6 +30,7 @@
+     ~UsersViewStep() override;
+ 
+     QString prettyName() const override;
++    QString prettyStatus() const override;
+ 
+     QWidget* widget() override;
+ 
+--- a/src/modules/users/UsersViewStep.cpp
++++ b/src/modules/users/UsersViewStep.cpp
+@@ -45,7 +45,14 @@
+ QString
+ UsersViewStep::prettyName() const
+ {
+-    return tr( "Users" );
++    return tr( "Account" );
++}
++
++QString
++UsersViewStep::prettyStatus() const
++{
++    return tr( "<strong>Administrator:</strong> %1<br/><strong>Hostname:</strong> %2" )
++        .arg( m_config->loginName().toHtmlEscaped(), m_config->hostname().toHtmlEscaped() );
+ }
+ 
+ 
+--- a/src/modules/finished/FinishedPage.ui
++++ b/src/modules/finished/FinishedPage.ui
+@@ -94,15 +94,9 @@
+         </spacer>
+        </item>
+        <item>
+-        <widget class="QCheckBox" name="restartCheckBox">
+-         <property name="toolTip">
+-          <string notr="true">&lt;Restart checkbox tooltip&gt;</string>
+-         </property>
++        <widget class="QPushButton" name="restartButton">
+          <property name="text">
+-          <string>&amp;Restart now</string>
+-         </property>
+-         <property name="checked">
+-          <bool>false</bool>
++          <string>&amp;Restart</string>
+          </property>
+         </widget>
+        </item>
+--- a/src/modules/finished/FinishedPage.cpp
++++ b/src/modules/finished/FinishedPage.cpp
+@@ -16,10 +16,10 @@
+ 
+ #include "Branding.h"
+ #include "Settings.h"
+-#include "compat/CheckBox.h"
+ #include "utils/Retranslator.h"
+ 
+ #include <QFocusEvent>
++#include <QMessageBox>
+ 
+ 
+ FinishedPage::FinishedPage( Config* config, QWidget* parent )
+@@ -32,20 +32,15 @@
+     ui->mainText->setWordWrap( true );
+     ui->mainText->setOpenExternalLinks( true );
+ 
+-    connect( config,
+-             &Config::restartModeChanged,
+-             [ this ]( Config::RestartMode mode )
+-             {
+-                 using Mode = Config::RestartMode;
+-
+-                 ui->restartCheckBox->setVisible( mode != Mode::Never );
+-                 ui->restartCheckBox->setEnabled( mode != Mode::Always );
+-             } );
+-    connect( config, &Config::restartNowWantedChanged, ui->restartCheckBox, &QCheckBox::setChecked );
+-    connect( ui->restartCheckBox,
+-             Calamares::checkBoxStateChangedSignal,
+-             [ config ]( Calamares::checkBoxStateType state )
+-             { config->setRestartNowWanted( state != Calamares::checkBoxUncheckedValue ); } );
++    connect( config, &Config::restartModeChanged, this, [this]( Config::RestartMode mode ) {
++        ui->restartButton->setVisible( mode != Config::RestartMode::Never );
++    } );
++    connect( ui->restartButton, &QPushButton::clicked, this, [this, config] {
++        if ( !config->doRestart( true ) )
++        {
++            QMessageBox::warning( this, tr( "Restart failed" ), tr( "Use Restart from the live action menu." ) );
++        }
++    } );
+ 
+     CALAMARES_RETRANSLATE_SLOT( &FinishedPage::retranslate );
+ }
+@@ -79,27 +74,13 @@
+                                        "You may now start using your new system.",
+                                        "@info" )
+                                        .arg( branding->versionedName() ) );
+-            ui->restartCheckBox->setToolTip( tr( "<html><head/><body>"
+-                                                 "<p>When this box is checked, your system will "
+-                                                 "restart immediately when you click on "
+-                                                 "<span style=\"font-style:italic;\">Done</span> "
+-                                                 "or close the setup program.</p></body></html>",
+-                                                 "@tooltip" ) );
+         }
+         else
+         {
+-            ui->mainText->setText( tr( "<h1>All done.</h1><br/>"
+-                                       "%1 has been installed on your computer.<br/>"
+-                                       "You may now restart into your new system, or continue "
+-                                       "using the %2 Live environment.",
+-                                       "@info" )
+-                                       .arg( branding->versionedName(), branding->productName() ) );
+-            ui->restartCheckBox->setToolTip( tr( "<html><head/><body>"
+-                                                 "<p>When this box is checked, your system will "
+-                                                 "restart immediately when you click on "
+-                                                 "<span style=\"font-style:italic;\">Done</span> "
+-                                                 "or close the installer.</p></body></html>",
+-                                                 "@tooltip" ) );
++            ui->mainText->setText( tr( "<h1>Installation complete</h1><br/>"
++                                       "Remove the installation media or select the installed disk at boot.<br/>"
++                                       "Then sign in with the account you just created.",
++                                       "@info" ) );
+         }
+     }
+     else
+--- a/src/modules/finished/Config.h
++++ b/src/modules/finished/Config.h
+@@ -78,8 +78,7 @@
+      *   if @p restartAnyway is @c true **unless** the mode is Never
+      * - The no-argument form uses the user setting
+      */
+-    void doRestart( bool restartAnyway );
+-    void doRestart() { doRestart( restartNowWanted() ); }
++    bool doRestart( bool restartAnyway );
+ 
+     /** @brief Send DBus notification
+      *
+--- a/src/modules/finished/Config.cpp
++++ b/src/modules/finished/Config.cpp
+@@ -106,7 +106,7 @@
+     }
+ }
+ 
+-void
++bool
+ Config::doRestart( bool restartAnyway )
+ {
+     cDebug() << "mode=" << restartModes().find( restartNowMode() ) << " user wants restart?" << restartNowWanted()
+@@ -114,8 +114,9 @@
+     if ( restartNowMode() != RestartMode::Never && restartAnyway )
+     {
+         cDebug() << Logger::SubEntry << "Running restart command" << m_restartNowCommand;
+-        QProcess::execute( "/bin/sh", { "-c", m_restartNowCommand } );
+-    }
++        return QProcess::execute( "/bin/sh", { "-c", m_restartNowCommand } ) == 0;
++    }
++    return false;
+ }
+ 
+ void
+--- a/src/modules/finished/FinishedViewStep.cpp
++++ b/src/modules/finished/FinishedViewStep.cpp
+@@ -15,8 +15,6 @@
+ #include "FinishedPage.h"
+ 
+ #include "JobQueue.h"
+-
+-#include <QApplication>
+ 
+ FinishedViewStep::FinishedViewStep( QObject* parent )
+     : Calamares::ViewStep( parent )
+@@ -86,7 +84,6 @@
+ FinishedViewStep::onActivate()
+ {
+     m_config->doNotify();
+-    connect( qApp, &QApplication::aboutToQuit, m_config, qOverload<>( &Config::doRestart ) );
+ }
+ 
+ 
+--- a/src/libcalamares/JobQueue.h
++++ b/src/libcalamares/JobQueue.h
+@@ -79,6 +79,8 @@
+      * just the name of the job, but some jobs include more information.
+      */
+     void progress( qreal percent, const QString& prettyName );
++    void jobStarted( int index );
++    void jobCompleted( int index, bool succeeded );
+     /** @brief Indicate that the queue is empty, after calling start()
+      *
+      * Emitted when the queue empties. The queue may also emit
+--- a/src/libcalamares/JobQueue.cpp
++++ b/src/libcalamares/JobQueue.cpp
+@@ -435,6 +435,8 @@
+                          << jobitem.job->prettyName() << '(' << ( m_jobIndex + 1 ) << '/' << m_runningJobs->count()
+                          << ')';
+                 o.refresh();  // So next time it shows the function header again
++                QMetaObject::invokeMethod(
++                    m_queue, "jobStarted", Qt::QueuedConnection, Q_ARG( int, m_jobIndex ) );
+                 emitProgress( 0.0 );  // 0% for *this job*
+                 connect( jobitem.job.data(), &Job::progress, this, &JobThread::emitProgress );
+                 auto result = jobitem.job->exec();
+@@ -445,8 +447,12 @@
+                     message = result.message();
+                     details = result.details();
+                 }
+-                QThread::msleep( 16 );  // Very brief rest before reporting the job as complete
+-                emitProgress( 1.0 );  // 100% for *this job*
++                QMetaObject::invokeMethod( m_queue, "jobCompleted", Qt::QueuedConnection,
++                                           Q_ARG( int, m_jobIndex ), Q_ARG( bool, result.succeeded() ) );
++                if ( result )
++                {
++                    emitProgress( 1.0 );
++                }
+             }
+             m_jobIndex++;
+         }
+--- a/src/libcalamaresui/viewpages/ExecutionViewStep.h
++++ b/src/libcalamaresui/viewpages/ExecutionViewStep.h
+@@ -18,14 +18,13 @@
+ #include <QStringList>
+ 
+ class QLabel;
++class QListWidget;
+ class QObject;
+ class QProgressBar;
+ class QTabWidget;
+ 
+ namespace Calamares
+ {
+-
+-class Slideshow;
+ 
+ /**
+  * @class
+@@ -64,7 +63,7 @@
+     QWidget* m_widget;
+     QProgressBar* m_progressBar;
+     QLabel* m_label;
+-    Slideshow* m_slideshow;
++    QListWidget* m_stages;
+     QTabWidget* m_tab_widget;
+     LogWidget* m_log_widget;
+ 
+@@ -72,7 +71,7 @@
+ 
+     void updateFromJobQueue( qreal percent, const QString& message );
+ 
+-    void toggleLog();
++    void setJobState( int index, const QString& state );
+ };
+ 
+ }  // namespace Calamares
+--- a/src/libcalamaresui/viewpages/ExecutionViewStep.cpp
++++ b/src/libcalamaresui/viewpages/ExecutionViewStep.cpp
+@@ -10,8 +10,6 @@
+  */
+ 
+ #include "ExecutionViewStep.h"
+-
+-#include "Slideshow.h"
+ 
+ #include "Branding.h"
+ #include "CalamaresConfig.h"
+@@ -31,33 +29,12 @@
+ #include <QDir>
+ #include <QHBoxLayout>
+ #include <QLabel>
++#include <QListWidget>
++#include <QTextDocumentFragment>
+ #include <QPlainTextEdit>
+ #include <QProgressBar>
+-#include <QTabBar>
+ #include <QTabWidget>
+-#include <QToolBar>
+-#include <QToolButton>
+ #include <QVBoxLayout>
+-
+-static Calamares::Slideshow*
+-makeSlideshow( QWidget* parent )
+-{
+-    const int api = Calamares::Branding::instance()->slideshowAPI();
+-    switch ( api )
+-    {
+-    case -1:
+-        return new Calamares::SlideshowPictures( parent );
+-#ifdef WITH_QML
+-    case 1:
+-        [[fallthrough]];
+-    case 2:
+-        return new Calamares::SlideshowQML( parent );
+-#endif
+-    default:
+-        cWarning() << "Unknown Branding slideshow API" << api;
+-        return new Calamares::SlideshowPictures( parent );
+-    }
+-}
+ 
+ namespace Calamares
+ {
+@@ -67,48 +44,55 @@
+     , m_widget( new QWidget )
+     , m_progressBar( new QProgressBar )
+     , m_label( new QLabel )
+-    , m_slideshow( makeSlideshow( m_widget ) )
++    , m_stages( new QListWidget )
+     , m_tab_widget( new QTabWidget )
+     , m_log_widget( new LogWidget )
+ {
+     m_widget->setObjectName( "slideshow" );
+     m_progressBar->setObjectName( "exec-progress" );
+-    CALAMARES_RETRANSLATE( m_progressBar->setFormat(
+-        tr( "%p%", "Progress percentage indicator: %p is where the number 0..100 is placed" ) ); );
+     m_label->setObjectName( "exec-message" );
+-
+-    QVBoxLayout* layout = new QVBoxLayout( m_widget );
+-    QVBoxLayout* bottomLayout = new QVBoxLayout;
+-    QHBoxLayout* barLayout = new QHBoxLayout;
+-
+-    m_progressBar->setMaximum( 10000 );
+-
+-    m_tab_widget->addTab( m_slideshow->widget(), "Slideshow" );
+-    m_tab_widget->addTab( m_log_widget, "Log" );
+-    m_tab_widget->tabBar()->hide();
+-
+-    layout->addWidget( m_tab_widget );
+-    Calamares::unmarginLayout( layout );
+-    layout->addLayout( bottomLayout );
+-
+-    bottomLayout->addSpacing( Calamares::defaultFontHeight() / 2 );
+-    bottomLayout->addLayout( barLayout );
+-    bottomLayout->addWidget( m_label );
+-
+-    QToolBar* toolBar = new QToolBar;
+-    const auto logButtonIcon = QIcon::fromTheme( "utilities-terminal" );
+-    auto toggleLogAction = toolBar->addAction(
+-        Branding::instance()->image(
+-            { "utilities-log-viewer", "utilities-terminal", "text-x-log", "text-x-changelog", "preferences-log" },
+-            QSize( 32, 32 ) ),
+-        "Toggle log" );
+-    auto toggleLogButton = dynamic_cast< QToolButton* >( toolBar->widgetForAction( toggleLogAction ) );
+-    connect( toggleLogButton, &QToolButton::clicked, this, &ExecutionViewStep::toggleLog );
+-
+-    barLayout->addWidget( m_progressBar );
+-    barLayout->addWidget( toolBar );
+-
+-    connect( JobQueue::instance(), &JobQueue::progress, this, &ExecutionViewStep::updateFromJobQueue );
++    m_label->setTextFormat( Qt::PlainText );
++    m_label->setWordWrap( true );
++    m_progressBar->setRange( 0, 0 );
++    m_progressBar->setAccessibleName( tr( "Installation in progress" ) );
++
++    auto* layout = new QVBoxLayout( m_widget );
++    layout->addWidget( m_label );
++    layout->addWidget( m_progressBar );
++    layout->addWidget( m_tab_widget, 1 );
++    m_stages->setSelectionMode( QAbstractItemView::NoSelection );
++    m_stages->setAccessibleName( tr( "Installation stages" ) );
++    m_tab_widget->addTab( m_stages, tr( "Stages" ) );
++    m_tab_widget->addTab( m_log_widget, tr( "Installation details" ) );
++    connect( m_tab_widget, &QTabWidget::currentChanged, this, [this]( int index ) {
++        if ( index == 1 )
++            m_log_widget->start();
++    } );
++
++    auto* queue = JobQueue::instance();
++    connect( queue, &JobQueue::queueChanged, this, [this]( const QStringList& jobs ) {
++        if ( jobs.isEmpty() )
++            return;
++        m_stages->clear();
++        for ( const auto& job : jobs )
++        {
++            const auto label = Qt::mightBeRichText( job ) ? QTextDocumentFragment::fromHtml( job ).toPlainText() : job;
++            auto* row = new QListWidgetItem( tr( "%1 — Pending" ).arg( label ), m_stages );
++            row->setData( Qt::UserRole, label );
++        }
++    } );
++    connect( queue, &JobQueue::jobStarted, this, [this]( int index ) {
++        setJobState( index, tr( "In progress" ) );
++        m_stages->scrollToItem( m_stages->item( index ) );
++    } );
++    connect( queue, &JobQueue::jobCompleted, this, [this]( int index, bool succeeded ) {
++        setJobState( index, succeeded ? tr( "Done" ) : tr( "Failed" ) );
++    } );
++    connect( queue, &JobQueue::failed, this, [this] {
++        m_progressBar->hide();
++        m_label->setText( tr( "Installation stopped" ) );
++    } );
++    connect( queue, &JobQueue::progress, this, &ExecutionViewStep::updateFromJobQueue );
+ }
+ 
+ QString
+@@ -160,8 +144,6 @@
+ void
+ ExecutionViewStep::onActivate()
+ {
+-    m_slideshow->changeSlideShowState( Slideshow::Start );
+-
+     const auto instanceDescriptors = Calamares::Settings::instance()->moduleInstances();
+ 
+     JobQueue* queue = JobQueue::instance();
+@@ -210,9 +192,8 @@
+ }
+ 
+ void
+-ExecutionViewStep::updateFromJobQueue( qreal percent, const QString& message )
+-{
+-    m_progressBar->setValue( int( percent * m_progressBar->maximum() ) );
++ExecutionViewStep::updateFromJobQueue( qreal, const QString& message )
++{
+     if ( !message.isEmpty() )
+     {
+         m_label->setText( message );
+@@ -220,25 +201,16 @@
+ }
+ 
+ void
+-ExecutionViewStep::toggleLog()
+-{
+-    const bool logBecomesVisible = m_tab_widget->currentIndex() == 0;  // ie. is not visible right now
+-    if ( logBecomesVisible )
+-    {
+-        m_log_widget->start();
+-    }
+-    else
+-    {
+-        m_log_widget->stop();
+-    }
+-    m_tab_widget->setCurrentIndex( logBecomesVisible ? 1 : 0 );
++ExecutionViewStep::setJobState( int index, const QString& state )
++{
++    if ( auto* row = m_stages->item( index ) )
++        row->setText( tr( "%1 — %2" ).arg( row->data( Qt::UserRole ).toString(), state ) );
+ }
+ 
+ void
+ ExecutionViewStep::onLeave()
+ {
+     m_log_widget->stop();
+-    m_slideshow->changeSlideShowState( Slideshow::Stop );
+ }
+ 
+ }  // namespace Calamares
+--- a/src/modules/welcome/WelcomePage.cpp
++++ b/src/modules/welcome/WelcomePage.cpp
+@@ -71,7 +71,8 @@
+         }
+     }
+ 
+-    initLanguages();
++    ui->languageIcon->hide();
++    ui->languageWidget->hide();
+ 
+     CALAMARES_RETRANSLATE_SLOT( &WelcomePage::retranslate );
+ 
+@@ -174,10 +175,6 @@
+ void
+ WelcomePage::focusInEvent( QFocusEvent* e )
+ {
+-    if ( ui->languageWidget )
+-    {
+-        ui->languageWidget->setFocus();
+-    }
+     e->accept();
+ }
+ 
+--- a/src/modules/welcome/Config.cpp
++++ b/src/modules/welcome/Config.cpp
+@@ -278,7 +278,9 @@
+     else
+     {
+         message = welcomeStyle ? tr( "<h1>Welcome to the Calamares installer for %1</h1>" )
+-                               : tr( "<h1>Welcome to the %1 installer</h1>" );
++                               : tr( "<h1>Welcome to the %1 installer</h1>"
++                                     "<p>You need a fixed, empty disk of at least 32 GiB and an internet connection to download signed packages.</p>"
++                                     "<p>You can review your choices before selecting Install ConstOS.</p>" );
+     }
+ 
+     return message;
+--- a/src/libcalamares/utils/Logger.cpp
++++ b/src/libcalamares/utils/Logger.cpp
+@@ -258,16 +258,14 @@
+     // Special case logging: don't log the (encrypted) password.
+     if ( l.list.contains( "usermod" ) )
+     {
++        bool redactNext = false;
+         for ( const auto& item : l.list )
+         {
+-            if ( item.startsWith( "$6$" ) )
+-            {
++            if ( redactNext )
+                 s << "<password>";
+-            }
+             else
+-            {
+                 s << item;
+-            }
++            redactNext = item == "-p" || item == "--password";
+         }
+     }
+     else
+--- a/src/libcalamares/pyboost/PythonJob.cpp
++++ b/src/libcalamares/pyboost/PythonJob.cpp
+@@ -232,7 +232,7 @@
+ QString
+ PythonJob::prettyName() const
+ {
+-    return QDir( m_workingPath ).dirName();
++    return m_configurationMap.value( "displayName", QDir( m_workingPath ).dirName() ).toString();
+ }
+ 
+ 

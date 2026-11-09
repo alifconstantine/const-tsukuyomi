@@ -8,6 +8,7 @@ ConstOS dikembangkan sebagai distro Linux untuk pengembangan perangkat lunak dan
 2. Baca [docs/architecture.md](docs/architecture.md) sebelum mengubah batas komponen, IPC, izin, lifecycle, atau kepemilikan paket/config.
 3. Gunakan [SKILLS.md](SKILLS.md) untuk menemukan prosedur yang cocok. Baca skill terkait sebelum mengubah atau memverifikasi subsistemnya.
 4. Periksa kode/config yang benar-benar dimuat. Status di dokumen bukan pengganti pemeriksaan implementasi; bukti VM bukan bukti perangkat fisik.
+5. Untuk installer, pemilihan paket, login, dan desktop pertama, baca [spesifikasi installer](docs/installer-plan.md). Ikuti gerbang di [panduan penerimaan](docs/acceptance-guide.md#installer-dan-reboot-tanpa-iso) sebelum beralih ke perluasan shell.
 
 ## Batas desain
 

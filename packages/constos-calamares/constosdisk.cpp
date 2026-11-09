@@ -4,14 +4,15 @@
 #include "utils/PluginFactory.h"
 #include "viewpages/ViewStep.h"
 
-#include <QComboBox>
 #include <QFile>
 #include <QFont>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLabel>
-#include <QLineEdit>
+#include <QListWidget>
+#include <QProcess>
+#include <QPushButton>
 #include <QStringList>
 #include <QVBoxLayout>
 
@@ -26,7 +27,7 @@ public:
     }
 
     QString prettyName() const override { return tr("Disk"); }
-    bool isNextEnabled() const override { return !selectedPath().isEmpty() && m_confirmation->text() == selectedPath(); }
+    bool isNextEnabled() const override { return !selectedDisk().isEmpty(); }
     bool isBackEnabled() const override { return true; }
     bool isAtBeginning() const override { return true; }
     bool isAtEnd() const override { return true; }
@@ -36,9 +37,9 @@ public:
     {
         if (!isNextEnabled())
             return {};
-        return tr("<strong>Use the entire disk %1</strong><br/>%2<br/>"
-                  "Create an EFI system partition (1 GiB) and a Btrfs system partition.")
-            .arg(m_disks->currentText().toHtmlEscaped(), m_details->text().toHtmlEscaped());
+        return tr("<strong>Use the entire disk %1</strong><br/>%2<br/>%3")
+            .arg(m_disks->selectedItems().constFirst()->text().toHtmlEscaped(),
+                 m_details->text().toHtmlEscaped(), layoutDescription().toHtmlEscaped());
     }
 
     QWidget* widget() override
@@ -65,9 +66,13 @@ public:
         layout->addWidget(title);
         layout->addWidget(label(tr("ConstOS uses the entire disk. Only fixed, empty disks of at least 32 GiB are shown.")));
 
-        m_disks = new QComboBox;
-        m_disks->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
-        m_disks->setMinimumContentsLength(24);
+        m_disks = new QListWidget;
+        m_disks->setObjectName(QStringLiteral("target-disks"));
+        m_disks->setSelectionMode(QAbstractItemView::SingleSelection);
+        m_disks->setUniformItemSizes(true);
+        m_disks->setMinimumHeight(104);
+        m_disks->setMaximumHeight(176);
+        m_disks->setAccessibleName(tr("Target disk"));
         auto* diskLabel = label(tr("&Target disk"));
         diskLabel->setBuddy(m_disks);
         layout->addWidget(diskLabel);
@@ -76,39 +81,65 @@ public:
         layout->addWidget(m_details);
 
         layout->addSpacing(8);
-        layout->addWidget(label(tr("Planned layout: EFI system partition (1 GiB) and Btrfs with system, home, and snapshot subvolumes.")));
-        m_pathLabel = label(tr("Confirm the disk &path"));
-        m_confirmation = new QLineEdit;
-        m_pathLabel->setBuddy(m_confirmation);
-        layout->addWidget(m_pathLabel);
-        layout->addWidget(m_confirmation);
+        layout->addWidget(label(layoutDescription()));
         m_hint = label({});
         layout->addWidget(m_hint);
 
-        QFile input(QStringLiteral("/run/constos-installer/eligible-disks.json"));
-        if (input.open(QIODevice::ReadOnly))
-        {
-            const auto disks = QJsonDocument::fromJson(input.readAll()).array();
-            for (const auto& candidate : disks)
-            {
-                const auto disk = candidate.toObject();
-                const auto path = disk.value("path").toString();
-                const auto size = disk.value("size").toDouble() / (1024.0 * 1024 * 1024);
-                m_disks->addItem(tr("%1 · %2 GiB").arg(path, QString::number(size, 'f', 1)), disk);
-            }
-        }
-        m_disks->setPlaceholderText(tr("Select a disk"));
-        m_disks->setCurrentIndex(-1);
-        connect(m_disks, &QComboBox::currentIndexChanged, this, [this] {
-            m_confirmation->clear();
-            updateSelection();
+        m_refresh = new QPushButton(tr("Check &again"));
+        layout->addWidget(m_refresh, 0, Qt::AlignLeft);
+        auto* scan = new QProcess(m_page);
+        connect(m_refresh, &QPushButton::clicked, this, [this, scan] {
+            m_refresh->setEnabled(false);
+            m_disks->clear();
+            m_hint->setText(tr("Checking for eligible disks…"));
+            scan->start(QStringLiteral("/usr/lib/constos-installer/backend.py"), {QStringLiteral("--scan-disks")});
         });
-        connect(m_confirmation, &QLineEdit::textChanged, this, &DiskStep::updateSelection);
-        updateSelection();
+        connect(scan, &QProcess::finished, this, [this](int code, QProcess::ExitStatus status) {
+            m_refresh->setEnabled(true);
+            if (status == QProcess::NormalExit && code == 0)
+                loadSnapshot();
+            else
+                m_hint->setText(tr("The disk check failed. Check again or use ConstOS Diagnostics."));
+        });
+        connect(scan, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
+            if (error == QProcess::FailedToStart)
+            {
+                m_refresh->setEnabled(true);
+                m_hint->setText(tr("Could not start the disk check. Use ConstOS Diagnostics."));
+            }
+        });
+        connect(m_disks, &QListWidget::itemSelectionChanged, this, &DiskStep::updateSelection);
+        loadSnapshot();
         return m_page;
     }
 
 private:
+    static QString layoutDescription()
+    {
+        return tr("GPT · EFI system partition (FAT32, 1 GiB) · Btrfs with @, @home, and @snapshots");
+    }
+
+    void loadSnapshot()
+    {
+        QFile input(QStringLiteral("/run/constos-installer/eligible-disks.json"));
+        const auto snapshot = input.open(QIODevice::ReadOnly) ? QJsonDocument::fromJson(input.readAll()) : QJsonDocument();
+        for (const auto& candidate : snapshot.array())
+        {
+            const auto disk = candidate.toObject();
+            const auto path = disk.value("path").toString();
+            const auto model = disk.value("model").toString().simplified();
+            const auto size = disk.value("size").toDouble() / (1024.0 * 1024 * 1024);
+            auto description = tr("%1 · %2 GiB").arg(path, QString::number(size, 'f', 1));
+            if (!model.isEmpty())
+                description += QStringLiteral(" · ") + model;
+            auto* item = new QListWidgetItem(description, m_disks);
+            item->setData(Qt::UserRole, disk);
+        }
+        updateSelection();
+        if (!snapshot.isArray())
+            m_hint->setText(tr("Could not read the disk list. Check again."));
+    }
+
     static QLabel* label(const QString& text)
     {
         auto* result = new QLabel(text);
@@ -119,24 +150,20 @@ private:
 
     QJsonObject selectedDisk() const
     {
-        return m_disks ? m_disks->currentData().value<QJsonObject>() : QJsonObject {};
+        const auto selection = m_disks ? m_disks->selectedItems() : QList<QListWidgetItem*>();
+        return selection.isEmpty() ? QJsonObject {} : selection.constFirst()->data(Qt::UserRole).toJsonObject();
     }
-
-    QString selectedPath() const { return selectedDisk().value("path").toString(); }
 
     void updateSelection()
     {
         const auto disk = selectedDisk();
         const auto path = disk.value("path").toString();
-        const auto model = disk.value("model").toString().simplified();
         const auto serial = disk.value("serial").toString().simplified();
         const auto wwn = disk.value("wwn").toString().simplified();
         const auto deviceId = disk.value("maj:min").toString();
         QStringList details;
         if (!path.isEmpty())
         {
-            if (!model.isEmpty())
-                details << tr("Model: %1").arg(model);
             if (!serial.isEmpty())
                 details << tr("Serial: %1").arg(serial);
             if (!wwn.isEmpty())
@@ -145,29 +172,25 @@ private:
         }
         m_details->setText(details.join(QStringLiteral("  ·  ")));
         m_details->setVisible(!path.isEmpty());
-        m_pathLabel->setText(path.isEmpty() ? tr("Confirm the disk &path") : tr("&Type %1 to confirm the target").arg(path));
-        m_confirmation->setEnabled(!path.isEmpty());
-        m_confirmation->setPlaceholderText(path);
         const bool ready = isNextEnabled();
         if (!m_disks->count())
-            m_hint->setText(tr("No eligible empty disk found. Close and reopen the installer after connecting one."));
-        else if (!m_confirmation->text().isEmpty() && !ready)
-            m_hint->setText(tr("The path does not match the selected disk."));
+            m_hint->setText(tr("No eligible disks found. Connect an empty, fixed disk of at least 32 GiB and check again."));
+        else if (!ready)
+            m_hint->setText(tr("Select the disk you want to use."));
         else
-            m_hint->setText(tr("Nothing is written until you choose Install on the Summary page."));
+            m_hint->setText(tr("Review this choice before selecting Install ConstOS."));
 
         auto* state = Calamares::JobQueue::instance()->globalStorage();
-        state->insert(QStringLiteral("constosDiskPath"), path);
-        state->insert(QStringLiteral("constosDiskConfirmation"), ready ? m_confirmation->text() : QString());
+        const auto selection = ready ? QString::fromUtf8(QJsonDocument(disk).toJson(QJsonDocument::Compact)) : QString();
+        state->insert(QStringLiteral("constosDiskSelection"), selection);
         Q_EMIT nextStatusChanged(ready);
     }
 
     QWidget* m_page = nullptr;
-    QComboBox* m_disks = nullptr;
+    QListWidget* m_disks = nullptr;
     QLabel* m_details = nullptr;
-    QLabel* m_pathLabel = nullptr;
-    QLineEdit* m_confirmation = nullptr;
     QLabel* m_hint = nullptr;
+    QPushButton* m_refresh = nullptr;
 };
 
 CALAMARES_PLUGIN_FACTORY_DECLARATION(DiskStepFactory)

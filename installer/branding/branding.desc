@@ -1,17 +1,18 @@
 ---
 componentName: constos
-welcomeStyleCalamares: true
-welcomeExpandingLogo: true
+welcomeStyleCalamares: false
+welcomeExpandingLogo: false
 windowExpanding: fullscreen
 windowPlacement: center
-slideshow: [ logo-black.svg ]
+# Required by the pinned branding loader even when the execution view lists jobs.
+slideshow: [ logo.svg ]
 
 strings:
-    productName:         Const Tsukuyomi
+    productName:         ConstOS
     version:             Alpha
     shortVersion:        Alpha
-    versionedName:       Const Tsukuyomi Alpha
-    shortVersionedName:  Const Tsukuyomi
+    versionedName:       ConstOS Alpha
+    shortVersionedName:  ConstOS
     bootloaderEntryName: ConstOS
     productUrl:          https://github.com/alifconstantine/const-tsukuyomi
     supportUrl:          https://github.com/alifconstantine/const-tsukuyomi/issues
@@ -21,7 +22,7 @@ strings:
 images:
     productLogo:         "logo.svg"
     productIcon:         "constos.svg"
-    productWelcome:      "logo-black.svg"
+    productWelcome:      "logo.svg"
 
 style:
    SidebarBackground:    "#161616"

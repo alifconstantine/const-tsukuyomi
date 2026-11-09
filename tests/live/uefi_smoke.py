@@ -212,7 +212,7 @@ class VM:
 def read_screen(args, vm, name):
     image = vm.screenshot(name)
     result = subprocess.run([args.tesseract, str(image), "stdout", "-l", "eng", "--psm", "6"],
-                            capture_output=True, text=True, timeout=15, check=True)
+                            capture_output=True, encoding="utf-8", timeout=15, check=True)
     (vm.directory / f"{name}.txt").write_text(result.stdout, encoding="utf-8")
     # Bitmap GRUB fonts make OCR confuse the letters O and the digit 0.
     return " ".join(result.stdout.lower().replace("0", "o").split())
@@ -276,15 +276,20 @@ def run_boot(args, server, mode):
         vm.start()
         select_grub(args, vm, mode, min(deadline, started + 90))
         if mode == "installer":
-            no_disk = wait_installer_screen(
-                args, vm, "installer-no-disk", ("no eligible empty disk",), deadline,
+            welcome = wait_installer_screen(
+                args, vm, "installer-welcome",
+                ("welcome to the constos", "32 gib", "review your choices"), deadline,
             )
-            vm.key("esc")
+            vm.key("alt", "c")
+            cancel = wait_installer_screen(
+                args, vm, "installer-cancel", ("cancel installation", "installer will quit"), deadline,
+            )
+            vm.key("alt", "y")
             actions = wait_installer_screen(
-                args, vm, "installer-actions", ("open installer", "restart", "shut down"), deadline,
+                args, vm, "installer-actions", ("choose an action", "restart", "shut down"), deadline,
             )
             return {"ok": True, "elapsed_seconds": round(time.monotonic() - started, 2),
-                    "evidence": [str(no_disk), str(actions)]}
+                    "evidence": [str(welcome), str(cancel), str(actions)]}
         command = f"curl -fsS {server.guest_url}/{mode}.py | python\n"
         # Readiness is proven by a report from the real terminal, not by a fixed boot sleep.
         while time.monotonic() < deadline:

@@ -1,0 +1,89 @@
+#sidebarApp {
+    background-color: #161616;
+}
+
+CalamaresWindow, #viewManager, #viewManagerStack,
+QScrollArea, QMessageBox, QDialog {
+    background-color: #202022;
+}
+
+QWidget {
+    color: #f5f5f5;
+}
+
+QLineEdit, QComboBox, QAbstractItemView, QPlainTextEdit, QTextBrowser {
+    background-color: #18181a;
+    color: #f5f5f5;
+    selection-background-color: #344774;
+    selection-color: #ffffff;
+    border: 1px solid #63636c;
+}
+
+QListWidget#target-disks::item {
+    padding: 8px 12px;
+}
+
+QLineEdit:focus, QComboBox:focus, QAbstractItemView:focus,
+QPlainTextEdit:focus, QTextBrowser:focus {
+    border-color: #a5cbff;
+}
+
+QTabBar::tab {
+    background-color: #29292d;
+    padding: 6px 14px;
+    border: 1px solid #63636c;
+}
+
+QTabBar::tab:selected {
+    background-color: #344774;
+}
+
+QTabBar::tab:focus {
+    border-color: #a5cbff;
+}
+
+QLabel#summaryItemBody {
+    background-color: #29292d;
+}
+
+#summaryStep QWidget#qt_scrollarea_viewport,
+#summaryStep QWidget#qt_scrollarea_viewport > QWidget {
+    background-color: #202022;
+}
+
+QPushButton {
+    min-height: 30px;
+    padding: 4px 16px;
+    border: 2px solid #73737b;
+    border-radius: 8px;
+    background-color: #29292d;
+}
+
+QPushButton:hover {
+    background-color: #393940;
+}
+
+QPushButton#view-button-next,
+QPushButton#restartButton {
+    background-color: #214ca8;
+    border-color: #214ca8;
+    color: #ffffff;
+}
+
+QPushButton#view-button-next:hover,
+QPushButton#restartButton:hover {
+    background-color: #183a85;
+}
+
+QPushButton:focus,
+QPushButton#view-button-next:focus,
+QPushButton#restartButton:focus {
+    border-color: #a5cbff;
+}
+
+QPushButton:disabled,
+QPushButton#view-button-next:disabled {
+    background-color: #29292d;
+    border-color: #54545d;
+    color: #9999a1;
+}

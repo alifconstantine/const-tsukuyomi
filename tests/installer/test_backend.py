@@ -4,6 +4,7 @@ import importlib.util
 import json
 from pathlib import Path
 import stat
+import subprocess
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -63,31 +64,69 @@ class DiskConfirmationTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.work = Path(directory.name)
-        self.disk = {'path': '/dev/vda', 'size': 40 * 1024**3, 'serial': 'QA-EMPTY'}
+        self.disk = {'path': '/dev/vda', 'size': 40 * 1024**3, 'serial': 'QA-EMPTY', 'diskseq': '7'}
         (self.work / 'eligible-disks.json').write_text(json.dumps([self.disk]))
 
-    def test_confirmation_must_match_exact_path(self):
+    def test_confirmation_rejects_raw_paths_and_incomplete_identities(self):
         with patch.object(backend, 'WORK', self.work), patch.object(backend, 'disk_identity') as probe:
-            with self.assertRaisesRegex(RuntimeError, 'exact disk path'):
-                backend.confirm_disk('/dev/vda', '/dev/vda ')
+            for value in ('', '/dev/vda', json.dumps({'path': '/dev/vda'})):
+                with self.subTest(value=value), self.assertRaises(RuntimeError):
+                    backend.confirm_disk(value)
             probe.assert_not_called()
         self.assertFalse((self.work / 'disk.json').exists())
 
-    def test_confirmation_rejects_unlisted_or_replaced_disk(self):
-        replaced = {**self.disk, 'serial': 'OTHER-DISK'}
+    def test_confirmation_rejects_replaced_disk_at_the_same_path(self):
+        replaced = {**self.disk, 'diskseq': '8'}
         with patch.object(backend, 'WORK', self.work), patch.object(backend, 'disk_identity', return_value=replaced):
-            for path in ('/dev/vdb', '/dev/vda'):
-                with self.subTest(path=path), self.assertRaisesRegex(RuntimeError, 'unavailable or its identity changed'):
-                    backend.confirm_disk(path, path)
+            with self.assertRaisesRegex(RuntimeError, 'selected disk changed'):
+                backend.confirm_disk(json.dumps(self.disk))
+        self.assertFalse((self.work / 'disk.json').exists())
+
+    def test_refresh_rejects_a_selection_from_the_previous_snapshot(self):
+        replaced = {**self.disk, 'diskseq': '8'}
+        with patch.object(backend, 'WORK', self.work), patch.object(backend, 'eligible_disks', return_value=[replaced]), \
+                patch.object(backend, 'disk_identity') as probe:
+            backend.scan_disks()
+            with self.assertRaisesRegex(RuntimeError, 'no longer in the current list'):
+                backend.confirm_disk(json.dumps(self.disk))
+            probe.assert_not_called()
         self.assertFalse((self.work / 'disk.json').exists())
 
     def test_confirmed_disk_persists_its_reviewed_identity(self):
         with patch.object(backend, 'WORK', self.work), patch.object(backend, 'disk_identity', return_value=self.disk):
-            backend.confirm_disk('/dev/vda', '/dev/vda')
+            backend.confirm_disk(json.dumps(self.disk))
         self.assertEqual(json.loads((self.work / 'disk.json').read_text()), self.disk)
 
 
+class InstallerLaunchTests(unittest.TestCase):
+    def test_launches_wizard_without_an_eligible_disk(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            (work / 'disk.json').write_text('{"path": "/dev/previous"}')
+
+            def run(args, **kwargs):
+                if args[:2] == ['calamares', '--config']:
+                    self.assertEqual(json.loads((work / 'eligible-disks.json').read_text()), [])
+                    self.assertFalse((work / 'disk.json').exists())
+                else:
+                    self.assertEqual(args, ['calamares', '--version'])
+                return subprocess.CompletedProcess(args, 0)
+
+            with patch.object(backend, 'WORK', work), patch.object(backend, 'require_live'), \
+                    patch.object(backend, 'eligible_disks', return_value=[]), \
+                    patch.object(backend, 'fcntl', SimpleNamespace(flock=lambda *_: None, LOCK_EX=1, LOCK_NB=2)), \
+                    patch.object(backend.os, 'fchmod', create=True), patch.object(backend, 'command', side_effect=run) as command:
+                self.assertEqual(backend.launch(), 0)
+            self.assertEqual(command.call_count, 2)
+
+
 class PreflightSafetyTests(unittest.TestCase):
+    def test_unmount_job_requires_a_target_even_though_cleanup_can_be_empty(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(backend, 'WORK', Path(directory)):
+            backend.unmount()
+            with self.assertRaisesRegex(RuntimeError, 'target mount point is missing'):
+                backend.unmount(required=True)
+
     def test_modified_archive_blocks_partitioning(self):
         with tempfile.TemporaryDirectory() as directory:
             work = Path(directory)
@@ -117,6 +156,7 @@ class PreflightSafetyTests(unittest.TestCase):
             replaced = {**confirmed, 'serial': 'OTHER-DISK'}
             with patch.object(backend, 'WORK', work), \
                     patch.object(backend, 'require_live'), \
+                    patch.object(backend, 'transaction_packages'), \
                     patch.object(backend, 'disk_identity', return_value=replaced), \
                     patch.object(backend, 'command', side_effect=AssertionError('Mutasi disk sebelum validasi')) as command:
                 with self.assertRaisesRegex(RuntimeError, 'disk changed'):

@@ -11,7 +11,7 @@ Dokumen ini menjelaskan batas komponen dan arah desain. Status serta bukti pener
 | Build dan boot | Profil Archiso di `iso/`, kernel CachyOS BORE, tema GRUB/Plymouth/SDDM, dan `iso/install-boot.sh`. Roadmap mencatat bukti build baseline serta verifikasi integrasi terbaru. | CI Linux, pembuktian seluruh skenario Boot UI di VM baru, dan bukti perangkat fisik. BIOS, Secure Boot, dan varian kernel/CPU bukan dukungan implisit. |
 | Sesi grafis | ISO men-stage sesi khusus Calamares di Cage. Pada target, `desktop/install.sh` memasang `constos.desktop` → `constos-session`, Lua Hyprland, layanan user, portal, dan asosiasi MIME. | Kiosk installer perlu dibuktikan pada ISO baru. Shell/Settings Quickshell/QML masih perlu spike fokus, multi-monitor, aksesibilitas, dan performa. |
 | Screenshot dan media | `constos-screenshot` dipakai oleh Print, Alt+Print, launcher, dan Waybar; seleksi dibatalkan tanpa menimpa clipboard. | Pembuktian pada sesi live/installed penuh, lalu UI screenshot, editor anotasi, recorder video, dan recorder audio di fase 07A. |
-| Sistem dan storage | Konfigurasi ZRAM/sysctl, paket `constos-core`/`constos-desktop`, serta launcher/backend Calamares untuk disk UEFI kosong. Pembuktian instalasi Btrfs, reboot tanpa ISO, dan login akun baru di SDDM telah lulus di VM. | Uji recovery/rollback Snapper dari bootloader dan verifikasi perangkat fisik sebelum ConstOS 1.0. |
+| Sistem dan storage | Konfigurasi ZRAM/sysctl, paket `constos-core`/`constos-desktop`, serta launcher/backend Calamares untuk disk UEFI kosong. Baseline VM sebelumnya membuktikan Btrfs, reboot tanpa ISO, dan login SDDM. | Ulangi jalur utama pada build terbaru sesuai [spesifikasi installer](installer-plan.md). Uji recovery/rollback Snapper dari bootloader dan verifikasi perangkat fisik sebelum ConstOS 1.0. |
 | Telemetri | CLI Rust `const` dari `constos-core` membaca data sistem pada target terpasang. Profil live masih memuat prototipe Python `constd` HTTP GET/JSON. | Satu collector Rust bersama dan IPC sesi bertipe. HTTP lama dihapus ketika konsumen sudah bermigrasi. |
 | Harness dan sandbox | Resep paket Harness dan wrapper Bubblewrap tersedia. | Paket Linux lengkap, helper computer use sesi pengguna, izin per capability, dan sandbox teruji. Keberadaan wrapper bukan bukti seluruh workspace/desktop sudah terisolasi. |
 | Aset | Master simbol Const di `assets/const-logo.svg`, ekspor boot/ikon di `assets/exports/`, serta manifest logo tersedia. Tema berada di `desktop/`. | Audit hak logo, aset lain, dan penerimaan boot baru masih diperlukan; pemilihan logo bukan bukti lisensi redistribusi. |
@@ -23,9 +23,12 @@ Diagram ini adalah desain target, bukan inventaris layanan yang sudah berjalan.
 ```mermaid
 flowchart TD
     BUILD["Archiso dan paket ConstOS"] --> LIVE["Profil live"]
-    BUILD --> INSTALL["Installer dan target terpasang"]
     LIVE --> KIOSK["Sesi installer Cage dan Calamares"]
-    INSTALL --> SESSION
+    LIVE --> DIAG["Konsol Diagnostics"]
+    KIOSK --> INSTALL["Preflight, instalasi, dan Finish"]
+    INSTALL --> LOGIN["Boot dari disk dan autentikasi SDDM"]
+    LOGIN --> SESSION["Sesi Hyprland terpasang"]
+    SESSION --> WELCOME["Welcome desktop satu kali"]
     SESSION --> SHELL["Shell, Settings, widget, dan Monitor"]
     SHELL --> CORE["CLI const dan constd Rust"]
     CORE --> SYSTEM["Kernel dan layanan Linux"]
@@ -89,7 +92,9 @@ Untuk Android, pilihan pada installer menyiapkan paket dan image Waydroid. Unit 
 
 Entri GRUB **Install ConstOS** memulai jalur grafis ISO. SDDM memakai autologin live untuk menjalankan `constos-installer.desktop` sebagai `liveuser`. Cage membuka `kiosk` pada satu output dengan renderer perangkat lunak. Kiosk membuka wizard Calamares dan menampilkan pilihan buka ulang, reboot, atau matikan ketika launcher keluar. Entri **ConstOS Diagnostics** memakai `multi-user.target` dan membuka TTY.
 
-Backend root mencatat identitas disk yang memenuhi syarat pada awal sesi installer. View module `constosdisk` milik paket `constos-calamares` menampilkan perangkat, kapasitas, dan detail identitas yang tersedia. Ia menerima pengetikan path dan menyerahkan pilihan melalui GlobalStorage. **Summary** memakai ringkasan dari modul itu. Setelah pengguna memilih **Install**, job preflight mencocokkan konfirmasi dengan snapshot dan membaca ulang identitas serta kelayakan disk. Job storage memvalidasi ulang sebelum partisi. Snapshot hanya hidup di direktori runtime milik root. Wizard dimulai dengan locale proses Inggris dan menyediakan pilihan locale pada langkah bawaan Calamares.
+Backend root menyimpan snapshot identitas disk di direktori runtime privat. Welcome tetap terbuka jika snapshot kosong. Modul `constosdisk` menampilkan daftar kandidat dan memperbarui snapshot lewat **Check again**, yang sekaligus menghapus pilihan lama. GlobalStorage membawa identitas kandidat sebagai JSON, termasuk `diskseq` dari kernel untuk membedakan perangkat pengganti yang memakai path yang sama. **Review** merangkum pilihan. Setelah **Install ConstOS**, preflight mencocokkan identitas dengan snapshot dan membaca ulang disk. Job unduhan menyelesaikan transaksi arsip bertanda tangan sebelum job storage memeriksa kembali identitas dan kelayakan tepat sebelum partisi. Welcome memeriksa RAM dan hak eksekusi. Locale antarmuka awal Inggris dan konfigurasi locale target memakai modul Location.
+
+UI menampilkan status dari event JobQueue, serta log Calamares di **Installation details**. Job unmount wajib menemukan target yang masih terpasang dan melepasnya sebelum **Installation complete**. Jika job gagal, Calamares menampilkan error dan kiosk menawarkan buka ulang setelah dialog ditutup. Pada jalur sukses, **Restart** memberi instruksi memilih disk terpasang. SDDM di target mengautentikasi akun baru sebelum `constos-session` dimulai. Pilihan browser dan pengelolaan NetworkManager di wizard mengikuti [spesifikasi installer](installer-plan.md).
 
 Paket `constos-desktop` memiliki satu aplikasi GTK untuk **Welcome** dan **Recommended Apps**. Service sesi meminta tampilan Welcome pada login pertama. Aplikasi menyimpan pengabaian per akun di `$XDG_STATE_HOME/constos/welcome-seen`, dengan fallback `~/.local/state`. Startup sesi mengimpor direktori XDG yang dipakai sehingga service dan launcher membaca data pengguna yang sama. Membuka tampilan melalui launcher melewati pemeriksaan penanda. Kedua tampilan berbagi instance aplikasi yang sama.
 

@@ -5,22 +5,16 @@ import libcalamares
 
 
 def pretty_name():
-    phase = libcalamares.job.configuration.get('phase')
-    return {'preflight': 'Checking the disk, clock, and keyrings and downloading signed packages',
-            'storage': 'Creating GPT, the EFI system partition, and Btrfs subvolumes',
-            'bootstrap': 'Installing packages on the target disk',
-            'finalize': 'Configuring services, Snapper, initramfs, and UEFI GRUB',
-            'unmount': 'Unmounting the target filesystems'}.get(phase, 'ConstOS')
+    return libcalamares.job.configuration['displayName']
 
 
 def run():
     try:
         phase = libcalamares.job.configuration['phase']
         if phase == 'preflight':
-            backend.preflight(
-                libcalamares.globalstorage.value('constosDiskPath'),
-                libcalamares.globalstorage.value('constosDiskConfirmation'),
-            )
+            backend.preflight(libcalamares.globalstorage.value('constosDiskSelection'))
+        elif phase == 'download':
+            backend.download()
         elif phase == 'storage':
             root = backend.storage()
             libcalamares.globalstorage.insert('rootMountPoint', root)
@@ -31,7 +25,7 @@ def run():
         elif phase == 'finalize':
             backend.finalize(libcalamares.globalstorage.value('rootMountPoint'))
         elif phase == 'unmount':
-            backend.unmount()
+            backend.unmount(required=True)
         else:
             raise RuntimeError('Unknown installation step.')
         return None

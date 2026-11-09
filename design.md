@@ -133,6 +133,7 @@ Escape menutup panel atau membatalkan preview yang bisa dibatalkan, lalu mengemb
 | --- | --- |
 | GRUB dan Plymouth | Palet statis vendor, logo sederhana, kontras tinggi, navigasi/log teks tetap tersedia; tidak membaca wallpaper atau preferensi pribadi |
 | SDDM | Identitas vendor yang sama, nama akun dan fokus ke kata sandi bila akun sudah dipilih. **Sign-in options** membuka pilihan akun, sesi, dan tata letak keyboard. Tema stock tersedia untuk recovery |
+| Installer | Monochrome, rail langkah konsisten, pilihan yang terlihat atau dapat difilter, dan satu aksi utama. Welcome memakai nama ConstOS dan logo berukuran tetap. Fokus, alasan aksi nonaktif, dan pemulihan terlihat dekat langkah terkait. [Spesifikasi installer](docs/installer-plan.md#langkah-wizard-dan-keputusan-ui) |
 | Lockscreen | Token sesi yang terakhir valid bila backend mendukung; autentikasi dan privasi lebih dahulu, tanpa riwayat clipboard/notifikasi sensitif |
 | Shell dan Settings | Token semantik bersama; launcher, panel, Quick Settings, notifikasi, dan form memakai state yang sama |
 | Capture dan izin | Sumber, status aktif, scope, durasi, cancel, dan Stop terbaca. Indikator tidak bergantung pada Island atau warna wallpaper |
@@ -157,7 +158,7 @@ Keputusan dasar: dark-first, netral hitam/putih, aksen default biru, pilihan man
 
 ## Review sebelum implementasi diperluas
 
-Mulai dari token dan satu prototype Appearance berisi preview komponen, lalu review satu alur boot → login → desktop → launcher → Settings. Desain dapat berjalan sebelum fase 06 diintegrasikan; tema tidak menghambat installer atau diagnosis.
+Review pertama mengikuti GRUB → installer → Finish → boot dari disk → login SDDM → desktop sesuai [spesifikasi installer](docs/installer-plan.md#alur-utama-yang-dituju). Setelah alur tersebut terbukti, gunakan satu prototype Appearance dan review desktop → launcher → Settings. Tema menjaga jalur diagnosis tetap bisa diakses.
 
 Review mencakup keyboard-only, kontras setiap state, pembaca layar pada toolkit yang dipilih, skala 100–200%, label panjang, layar kecil, dua monitor, dan reduced motion. Mode Wallpaper perlu gambar terang, gelap, grayscale, warna jenuh, berkas rusak/hilang, pergantian sumber monitor, serta pembuktian bahwa Cancel mengembalikan seluruh preview. Mode Manual harus bertahan saat wallpaper berubah.
 

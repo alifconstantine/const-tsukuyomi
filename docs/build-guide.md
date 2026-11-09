@@ -22,6 +22,8 @@ Jalur rebuild ada di `packages/constos-calamares/PKGBUILD`: sumber [CachyOS Cala
 
 Sejak `3.4.1-2`, paket ini juga mengompilasi modul halaman **Disk** di `packages/constos-calamares/`. Gunakan direktori artefak Calamares baru untuk ISO dengan wizard ini. `SOURCE_SHA256SUMS` mencakup kode modul, CMake, dan resep build. Di guest Diagnostics, periksa `pacman -Ql constos-calamares | grep /constosdisk/` sebelum menguji wizard.
 
+Revisi `3.4.1-3` menambahkan `installer-ui.patch` untuk halaman Welcome, Review, progres JobQueue, dan Finish. Helper memeriksa checksum patch dan modul Disk bersama sumber lainnya. Buat ulang paket Calamares bila mengubah patch atau modul.
+
 Patch `qt-widgets.patch` menambahkan dependensi target Qt Widgets untuk implementasi `show_warning()` pada API Python fork yang dipatok tersebut. Tanpa patch, kompilasi gagal karena `qmessagebox.h` tidak ditemukan. Fingerprint helper mencakup resep dan patch; jangan menerapkan patch hanya pada direktori kerja build.
 
 ## Rakit profil dan ISO
@@ -57,7 +59,7 @@ Build biasa tidak memerlukan renderer karena memakai ekspor yang sudah dikomit. 
 
 ## Build tercatat dan smoke Live UEFI
 
-Runner di `tests/live/` menguji ISO tanpa menambah service, SSH, atau konfigurasi khusus tes ke image. Host menjalankan QEMU sebagai user biasa, membuka dua VM tanpa disk terpasang, memilih entri GRUB melalui keyboard, lalu menjalankan probe dari Foot atau TTY. HTTP loopback host hanya menyajikan probe dan menerima hasil melalui jaringan user-mode QEMU; server ditutup setelah tes.
+Runner di `tests/live/` menguji ISO tanpa menambah service, SSH, atau konfigurasi khusus tes ke image. Host menjalankan QEMU sebagai user biasa, membuka dua VM tanpa disk terpasang, dan memilih entri GRUB melalui keyboard. Runner membaca layar Calamares pada jalur grafis dan menjalankan probe dari TTY pada jalur Diagnostics. HTTP loopback host menyajikan probe dan menerima hasil melalui jaringan user-mode QEMU, lalu ditutup setelah tes.
 
 Tambahkan perkakas pada host Linux yang sudah disiapkan di atas:
 
@@ -94,7 +96,7 @@ Path firmware mengikuti [paket Arch edk2-ovmf](https://archlinux.org/packages/ex
 | Jalur | Bukti yang diperiksa |
 | --- | --- |
 | Build Linux | SHA checkout bersih sebelum/sesudah build, checksum paket lokal dan sumbernya, seluruh symlink overlay yang terlacak tetap symlink saat staging, versi paket host, log Archiso, satu ISO beserta SHA-256. |
-| Install ConstOS | VM smoke hanya membawa ISO dan firmware. Timeout GRUB membuka dialog berbahasa Inggris yang menjelaskan disk kosong tidak tersedia. Esc membuka layar tindakan installer. Periksa screenshot untuk memastikan tidak ada desktop atau panel di belakangnya. |
+| Install ConstOS | VM smoke hanya membawa ISO dan firmware. Timeout GRUB membuka Welcome berbahasa Inggris. `Alt+C` membuka dialog Cancel dan `Alt+Y` kembali ke layar tindakan installer. Periksa screenshot Welcome dan dialog Cancel. |
 | Jaringan/ZRAM | NetworkManager aktif, IPv4 dan lease DHCP pada interface non-loopback, serta perangkat ZRAM aktif sebagai swap dengan algoritme `zstd`. Ini bukan uji internet atau Wi-Fi fisik. |
 | Diagnostics | Cold boot entri terakhir dengan `systemd.unit=multi-user.target`, SDDM tidak aktif, controlling terminal `/dev/tty1`, dan `sudo -n journalctl -b` membaca entri dengan boot ID yang sesuai. Probe juga memeriksa kernel, symlink systemd, paket Cage, sesi installer, dan `calamares --version` dengan Qt offscreen. |
 
@@ -121,7 +123,7 @@ python3 -m unittest discover -s tests/installer -p 'test_*.py'
 python3 -m unittest discover -s tests/desktop -p 'test_*.py'
 ```
 
-Gunakan VM dengan disk virtual kosong terpisah untuk membuktikan wizard, penulisan disk, reboot, dan login. Smoke tanpa disk menguji jalur boot dan penolakan awal.
+Gunakan VM dengan disk virtual kosong terpisah untuk membuktikan seluruh wizard, penulisan disk, reboot, dan login. Smoke tanpa disk menguji jalur boot, Welcome, dan Cancel.
 
 ## Pengujian terpadu dan recovery tema
 

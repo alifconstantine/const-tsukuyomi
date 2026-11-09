@@ -63,7 +63,10 @@ def disk_identity(device):
     signatures = json.loads(capture(['wipefs', '--json', '--no-act', device])).get('signatures', [])
     if signatures:
         raise RuntimeError('The disk has a filesystem or partition signature. Select an empty disk.')
-    return {key: disk.get(key) for key in ('path', 'size', 'model', 'serial', 'wwn', 'maj:min')}
+    identity = {key: disk.get(key) for key in ('path', 'size', 'model', 'serial', 'wwn', 'maj:min')}
+    # A replacement can reuse the path and major/minor, and may have no serial.
+    identity['diskseq'] = (Path('/sys/dev/block') / disk['maj:min'] / 'diskseq').read_text().strip()
+    return identity
 
 
 def eligible_disks():
@@ -79,14 +82,32 @@ def eligible_disks():
     return disks
 
 
-def confirm_disk(selected, typed_path):
-    if not selected or typed_path != selected:
-        raise RuntimeError('Type the exact disk path to confirm the target.')
+def scan_disks():
+    snapshot = WORK / 'eligible-disks.json'
+    pending = snapshot.with_suffix('.tmp')
+    pending.write_text(json.dumps(eligible_disks()))
+    pending.replace(snapshot)
+
+
+def confirm_disk(selection):
+    try:
+        disk = json.loads(selection)
+    except (TypeError, ValueError) as error:
+        raise RuntimeError('Select an eligible disk and review the installation plan.') from error
     candidates = json.loads((WORK / 'eligible-disks.json').read_text())
-    disk = next((candidate for candidate in candidates if candidate['path'] == selected), None)
-    if disk is None or disk_identity(selected) != disk:
-        raise RuntimeError('The selected disk is unavailable or its identity changed. Reopen the installer.')
+    if disk not in candidates:
+        raise RuntimeError('The selected disk is no longer in the current list. Open the installer and select the disk again.')
+    recheck_disk(disk)
     (WORK / 'disk.json').write_text(json.dumps(disk))
+
+
+def recheck_disk(expected):
+    try:
+        current = disk_identity(expected['path'])
+    except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
+        raise RuntimeError(f'The selected disk is unavailable or no longer eligible. Select it again.\n{error}') from error
+    if current != expected:
+        raise RuntimeError('The selected disk changed. Open the installer and select the disk again.')
 
 
 def packages():
@@ -140,9 +161,9 @@ def transaction_packages():
     return result
 
 
-def preflight(selected, typed_path):
+def preflight(selection):
     require_live()
-    confirm_disk(selected, typed_path)
+    confirm_disk(selection)
     for binary in ('pacstrap', 'arch-chroot', 'genfstab', 'sfdisk', 'udevadm',
                    'mkfs.fat', 'mkfs.btrfs', 'btrfs', 'mount', 'umount', 'pacman', 'pacman-key'):
         if not shutil.which(binary):
@@ -161,10 +182,20 @@ def preflight(selected, typed_path):
     conf = (DATA / 'pacman.conf').read_text().replace(
         '[options]\n', f'[options]\nCacheDir = {WORK}/cache\n')
     (WORK / 'pacman.conf').write_text(conf)
+
+
+def download():
     # Full transaction resolution + signed download selesai SEBELUM perubahan disk.
     # Cache tmpfs dapat memerlukan beberapa GiB; ENOSPC menghentikan preflight.
-    command(['pacman', '--config', WORK / 'pacman.conf', '--dbpath', WORK / 'db',
-             '--logfile', WORK / 'pacman.log', '-Syw', '--noconfirm', *packages()])
+    try:
+        command(['pacman', '--config', WORK / 'pacman.conf', '--dbpath', WORK / 'db',
+                 '--logfile', WORK / 'pacman.log', '-Syw', '--noconfirm', *packages()])
+    except subprocess.CalledProcessError as error:
+        raise RuntimeError(
+            'Could not download or verify the installation packages. Check the network and the package log, '
+            'then reopen the installer. No changes were made to the disk.\n'
+            'Logs: /run/constos-installer/pacman.log and /run/constos-installer/calamares.log'
+        ) from error
     filenames = capture([
         'pacman', '--config', WORK / 'pacman.conf', '--dbpath', WORK / 'db',
         '--logfile', WORK / 'pacman.log', '-Sp', '--noconfirm', '--print-format', '%f', *packages(),
@@ -185,9 +216,8 @@ def storage():
     # Revalidasi tepat sebelum syscall pertama yang mengubah disk.
     require_live()
     expected = json.loads((WORK / 'disk.json').read_text())
-    if disk_identity(expected['path']) != expected:
-        raise RuntimeError('The disk changed or is no longer empty. Installation stopped.')
     transaction_packages()
+    recheck_disk(expected)
     device = expected['path']
     command(['sfdisk', '--lock=yes', '--wipe=never', device], input=(
         'label: gpt\nunit: sectors\n\n'
@@ -306,14 +336,18 @@ def finalize(root):
              '--description', 'Initial ConstOS installation', '--cleanup-algorithm', 'number'])
 
 
-def unmount():
+def unmount(*, required=False):
     marker = WORK / 'root'
+    if required and not marker.exists():
+        raise RuntimeError('The target mount point is missing. Check the installation log.')
     if marker.exists():
         root = Path(marker.read_text())
         if root.parent != Path('/mnt') or not root.name.startswith('constos-root-'):
             raise RuntimeError('Invalid target mount point.')
         if root.is_mount():
             command(['umount', '--recursive', root])
+        elif required:
+            raise RuntimeError('The target was unmounted unexpectedly. Check the installation log.')
         root.rmdir()
         marker.unlink()
 
@@ -331,11 +365,8 @@ def launch():
         with log_path.open('w') as log:
             os.fchmod(log.fileno(), 0o600)
             command(['calamares', '--version'], stdout=log, stderr=subprocess.STDOUT)
-        eligible = eligible_disks()
-        if not eligible:
-            raise RuntimeError('No eligible empty disk found. Connect a fixed disk of at least 32 GiB with no partitions or filesystem signatures.')
         (WORK / 'disk.json').unlink(missing_ok=True)
-        (WORK / 'eligible-disks.json').write_text(json.dumps(eligible))
+        scan_disks()
         try:
             with log_path.open('a') as log:
                 return command(['calamares', '--config', '/usr/share/constos/installer/calamares'],
@@ -346,6 +377,14 @@ def launch():
 
 if __name__ == '__main__':
     os.environ.update(LANG='C.UTF-8', LC_ALL='C.UTF-8', LANGUAGE='en_US:en')
+    if sys.argv[1:] == ['--scan-disks']:
+        try:
+            require_live()
+            scan_disks()
+        except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
+            print(error, file=sys.stderr)
+            sys.exit(1)
+        sys.exit(0)
     try:
         uid = int(os.environ.get('SUDO_UID', os.getuid()))
         if uid:

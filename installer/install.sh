@@ -11,9 +11,9 @@ ln -sfn -- /usr/share/calamares/qml "$root/usr/share/constos/installer/calamares
 for file in "$source_dir"/modules-config/*.conf; do
   [[ -f $file ]] && install -m644 -- "$file" "$root/usr/share/constos/installer/calamares/modules/"
 done
-install -m644 -- "$source_dir/branding/branding.desc" "$root/usr/share/constos/installer/calamares/branding/constos/branding.desc"
+install -m644 -- "$source_dir/branding/branding.desc" "$source_dir/branding/stylesheet.qss" \
+  "$root/usr/share/constos/installer/calamares/branding/constos/"
 install -m644 -- "$source_dir/../assets/const-logo.svg" "$root/usr/share/constos/installer/calamares/branding/constos/logo.svg"
-install -m644 -- "$source_dir/../assets/exports/const-logo-black.svg" "$root/usr/share/constos/installer/calamares/branding/constos/logo-black.svg"
 install -m644 -- "$source_dir/../assets/exports/constos.svg" "$root/usr/share/constos/installer/calamares/branding/constos/constos.svg"
 for file in "$source_dir/modules/constos/module.desc" "$source_dir/modules/constos/main.py"; do
   install -m644 -- "$file" "$root/usr/lib/constos-installer/modules/constos/"

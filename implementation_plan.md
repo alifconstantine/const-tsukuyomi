@@ -1,8 +1,10 @@
 # ConstOS · Roadmap Pengembangan
 
-**Baseline 7 November 2026** · CachyOS x86_64, UEFI, Hyprland/Wayland
+**Prioritas 9 November 2026** · CachyOS x86_64, UEFI, Hyprland/Wayland
 
 ConstOS dikembangkan sebagai distro Linux untuk pengembangan perangkat lunak dan penggunaan desktop sehari-hari, dengan sistem yang bisa dipasang, diperbarui, dan dipulihkan serta antarmuka monokrom yang konsisten sejak boot. Const Harness menambah workbench dan akses lokal ke desktop dengan izin pengguna. Roadmap dimulai dari Boot UI dan berakhir saat artefak rilis, jalur update, dan recovery sudah teruji.
+
+**P0 saat ini adalah jalur pemasangan sampai desktop.** Reproduksi pada ISO yang tercatat, benahi handoff dari installer ke boot disk, lalu buktikan login SDDM dan desktop hari pertama. Implementasi installer mengikuti [spesifikasi installer](docs/installer-plan.md). Perluasan shell dimulai setelah jalur tersebut stabil pada VM.
 
 ## Posisi sekarang
 
@@ -10,13 +12,40 @@ ConstOS dikembangkan sebagai distro Linux untuk pengembangan perangkat lunak dan
 | --- | --- | --- |
 | Build ISO | Profil Archiso dengan tema boot/login, sesi desktop, paket lokal, dan installer berhasil dibangun di Linux. Wrapper build mencatat checkout bersih, checksum paket/sumber lokal, symlink staging, versi paket, log, dan checksum ISO. Runner Live UEFI telah lulus pada Linux/KVM dan Windows/WHPX. | Jalankan workflow pada runner GitHub tepercaya yang sudah dikonfigurasi. Uji boot pada perangkat fisik. |
 | Sesi live | Sumber ISO menyiapkan Cage sebagai sesi installer khusus dan menyediakan TTY diagnostik. Bukti KVM untuk desktop live lama tetap tercatat di bawah. | Build ISO baru dan buktikan dua jalur boot. Uji shortcut, audio, portal, dan aplikasi harian pada target terpasang sesuai [panduan pengujian terpadu](docs/acceptance-guide.md). |
-| Sistem dan installer | Paket core/desktop, manifest target, launcher, dan backend disk kosong tersedia. Halaman Disk dan Summary sekarang berada dalam satu wizard Calamares. Bukti VM sebelumnya mencakup cancel, kegagalan unduh sebelum partisi, instalasi Btrfs, reboot tanpa ISO, login SDDM, dan snapshot awal Snapper. | Rebuild Calamares `3.4.1-2` dan buktikan alur wizard baru di VM. Uji recovery/rollback Snapper interaktif, update kernel pada target terpasang, serta instalasi perangkat fisik. |
+| Sistem dan installer | Paket core/desktop dan backend disk kosong tersedia. Wizard sumber memakai daftar disk dan **Review** sebagai konfirmasi. JobQueue memberi status tahap dan Finish menunggu unmount. | Status build dan login dicatat di bawah. Lanjutkan Network, pemilih locale/zona waktu, retry aman, dan pilihan browser menurut [spesifikasi installer](docs/installer-plan.md). |
 | Diagnosis, telemetri, dan AI | `constos-core` memasang CLI Rust `const` pada sistem terpasang. `const doctor` memeriksa kernel, swap ZRAM, unit systemd yang gagal, ruang tersedia di `/`, serta konfigurasi Snapper dan mount `/.snapshots`. Collector dan daemon Rust `constd` lulus uji host pada bukti di bawah. | Uji dua pemeriksaan storage pada target terpasang. Integrasikan daemon Rust dan sambungkan UI/Waybar ke kontrak IPC sesi. Profil live saat ini tidak mewajibkan Harness atau Ollama. |
 | Pembaruan | `const update` membuka transaksi penuh pacman dari terminal pada sistem terpasang. | Siapkan repo rilis ConstOS bertanda tangan dan tuntaskan skenario update, reboot, dan recovery pada kandidat rilis. |
 | Capture desktop | Print, Alt+Print, launcher, dan Waybar memanggil `constos-screenshot`. Pengambilan layar penuh ke PNG clipboard telah diperiksa pada ISO antara; penolakan/error dan cancel tanpa perubahan clipboard telah diperiksa melalui smoke terisolasi. | Belum ada bukti cancel/seleksi area `slurp` interaktif di VM. Preview, simpan berkas, anotasi, rekaman video, dan rekaman audio tetap berada di fase 07A. |
 | Shell dan aplikasi target | Paket desktop memakai Hyprland, Waybar, Wofi, Mako, Foot dengan Bash sebagai login shell awal, serta Thunar. GTK menyediakan Welcome dan Recommended Apps. | Const Hub, pengaturan Foot, tema Liquid Glass, Const Store, dock, widget, dan Dynamic Island adalah target pengembangan. |
 
 Smoke manual pada 6 November memakai VM QEMU/OVMF dengan 4 vCPU dan 3 GiB RAM. Kernel `7.3.1-1-cachyos-bore` berjalan di sesi Wayland, `systemctl --failed` melaporkan 0 unit gagal, dan `journalctl` bisa dibuka dari console fallback. Nama host live masih `CachyOS`. Instalasi ke disk dan boot perangkat fisik masih perlu diuji. [Panduan build](docs/build-guide.md)
+
+### Prioritas installer setelah review Ryoku · 9 November 2026
+
+Sebanyak 26 screenshot Ryoku edisi CachyOS dan bagian **Everything, already installed** ditinjau bersama source Ryoku v1.0.7. Ini bukti desain referensi dari boot sampai progres, bukan hasil uji ConstOS. [Spesifikasi installer](docs/installer-plan.md) menetapkan wizard yang lebih ringkas, Brave sebagai rekomendasi, konfirmasi disk kosong di Review, dan isi desktop pertama. Skenario Gaming dikeluarkan dan pilihan Yes/No Const Harness dibatasi pada prototipe. Data layar selesai, SDDM, dan Hyprland untuk build ConstOS berikutnya masih harus diambil dari VM.
+
+Audit revisi sebelumnya menemukan wizard dapat keluar sebelum Welcome ketika daftar disk kosong dan Welcome mewajibkan probe satu mirror. Perubahan sumber lokal memindahkan kendala disk ke wizard, memusatkan verifikasi jaringan di preflight, serta mengalihkan smoke grafis ke Welcome dan Cancel. Bukti Linux dan hasil kasus pengguna belum tercatat.
+
+Pada host Windows, 17 uji installer dengan fixture lulus. Qt 6.9.2 offscreen memeriksa warna tombol utama/disabled dan shortcut Cancel pada widget contoh. Payload staging dan orkestrasi smoke dengan OCR/QMP simulasi juga diperiksa. Uji boot, ukuran layar, fokus, dan transaksi pada ISO aktual masih terbuka.
+
+### Reproduksi installer dari `001a1db` · 9 November 2026
+
+Build dari checkout bersih `001a1dbcc5faa136372be6eda048a42d45f95f3f` di Arch Linux x86_64 menghasilkan ISO SHA-256 `4a135a7370563de3c262b7995e0271df0929058e9e23083f26d25aa140d4f8ea`. Calamares `3.4.1-2` memakai Qt `6.12.0-3` dan Boost `1.92.0-1`. Target QEMU/WHPX memakai firmware EDK2 UEFI, 4 vCPU, RAM 7 GiB, dan qcow2 kosong 40 GiB. Serial `CONSTOS-P0-baseline` dicocokkan di wizard sebelum pemasangan. Metadata dan tangkapan layar berada di `iso/work/p0-installer-20261109T103501Z/baseline/`.
+
+- GRUB membuka Cage/Calamares. Disk meminta pengetikan path dan Summary hanya merangkum lokasi, keyboard, dan disk. Selama unduhan cache sudah mencapai 790 MiB ketika UI masih menampilkan 0%. Proses kemudian menyelesaikan pemasangan dan melepas mount Btrfs serta ESP.
+- Dalam percobaan dari Finish, wizard tertutup ke menu kiosk. Saat installer dibuka lagi pada disk yang sudah dipasang, launcher menampilkan **No eligible empty disk found** sebelum Welcome. Belum ada bukti yang mengaitkan hasil itu dengan laporan pengguna dari build lain.
+- Reboot dari TTY dan cold boot QEMU dengan hanya disk membaca `\\EFI\\ConstOS\\grubx64.efi`. SDDM meminta kata sandi, dan akun uji masuk ke Hyprland dengan Waybar serta Welcome. Hyprland `0.57.1` menampilkan peringatan startup langsung tanpa `start-hyprland`.
+
+### Revisi P0 Disk, Review, dan Finish · 9 November 2026
+
+Sumber build memakai `001a1db` ditambah perubahan lokal yang direkam di `iso/work/p0-installer-20261109T103501Z/final/source.txt`. Builder Arch Linux x86_64 menghasilkan Calamares `3.4.1-3` dan ISO SHA-256 `0bfc8f89330169e069fc356226d9439d7df60dc9cb5cc003a1e31689c9fb37a7`. Bukti utama berada di subdirektori `final/`. VM utama memakai QEMU `11.1.0`/WHPX, EDK2 UEFI, 4 vCPU, RAM 7 GiB, dan qcow2 baru 40 GiB dengan serial `CONSTOS-P0-final`.
+
+- Build awal revisi `264bba88…` berhenti di loader branding dengan `key not found: slideshow`. Descriptor kini menyertakan kunci itu. Build antara `33860d7e…` membuka wizard, tetapi menunjukkan layout kustom sebagai default Keyboard dan kontras judul Review rendah. Build final menampilkan English (US) dan Review yang terbaca. Pemilihan lewat keyboard, **Edit** dan **Check again** diuji sebelum **Install ConstOS**.
+- Pada VM terpisah dengan build antara, jaringan dinonaktifkan sebelum **Install ConstOS**. Tahap unduhan gagal dengan detail log dan installer dapat dibuka kembali dari kiosk saat offline. `lsblk` dan `wipefs --json --no-act` menunjukkan disk 40 GiB tetap tanpa partisi, mount, atau signature. Bukti berada di subdirektori `revised/`.
+- Build final menampilkan tahap unduhan, partisi, bootstrap, konfigurasi, dan unmount dari JobQueue. **Installation complete** tampil setelah ESP dan Btrfs dilepas. **Restart** mengakhiri VM live dengan `-no-reboot`. VM yang sama kemudian dijalankan dengan `-boot order=c` tanpa ISO, memuat GRUB dari ESP, lalu menampilkan SDDM. Kata sandi salah ditolak dan kata sandi benar membuka Hyprland, Waybar, dan Welcome pertama. Lihat `stage-complete.png`, `installed-serial.log`, `sddm-wrong-password.png`, dan `desktop-first-welcome.png` di `final/`.
+- Pada target, Foot dan Thunar terbuka lewat pintasan. Foot menunjukkan sesi Wayland, target systemd pengguna aktif, Btrfs terpasang di `/`, `/home`, dan `/.snapshots`, serta ESP FAT32 di `/boot/efi`. `sudo -n` ditolak tanpa autentikasi dan `passwd -S root` melaporkan `L`. Setelah **Skip**, logout dan login kedua membuka desktop tanpa menampilkan Welcome otomatis. Welcome masih bisa dibuka dari Wofi. Hyprland masih menampilkan peringatan startup langsung. Bukti ada di `foot-system-checks.png`, `desktop-foot-thunar.png`, `desktop-second-login.png`, dan `desktop-welcome-reopened.png`.
+- Smoke Live UEFI untuk SHA ISO yang sama lulus pada VM tanpa disk. Entri default membuka Welcome dan Cancel mengembalikan menu kiosk. Diagnostics mencapai TTY dengan 18 pemeriksaan baseline lulus. Ringkasan dan bukti ada di `final-smoke-pass/summary.json`.
+- Sebanyak 19 uji backend lulus di Linux. Kandidat `cachyos/brave-bin` x86_64 versi `1:1.99.55-1` lulus verifikasi signature dan memuat `brave-browser.desktop` pada pemeriksaan arsip di builder. Launcher, MIME, dan pilihan browser di wizard masih menunggu integrasi. Bukti paket ada di `candidate/brave-signature.log` dalam direktori uji yang sama.
 
 ### Revisi alur installer · 8 November 2026
 
@@ -132,7 +161,7 @@ Audit sebelum push menemukan konfigurasi `makepkg` host memakai `target-cpu=nati
 | Gerbang | Fase | Hasil yang bisa dipakai |
 | --- | --- | --- |
 | **A · Live Alpha** | 01 | ISO dari checkout bersih, sesi installer, dan konsol diagnostik bekerja di UEFI. |
-| **B · Installable Alpha** | 02–05 | Instalasi disk kosong, reboot tanpa ISO, aplikasi inti desktop, konfigurasi akun yang bertahan, dan snapshot awal Snapper dibuktikan pada VM. Bukti rollback dan perangkat fisik dicatat terpisah. |
+| **B · Installable Alpha** | 02–05 | Satu build membuktikan wizard, instalasi disk kosong, reboot tanpa ISO, login SDDM dengan akun baru, sesi Hyprland, browser sesuai pilihan, aplikasi inti, dan snapshot awal Snapper. Bukti rollback dan perangkat fisik dicatat terpisah. |
 | **C · Desktop Beta** | 06–10, termasuk 07A–07B | Shell minimalis dan Const Hub dengan aksi nyata, Const Store, dock dan Dynamic Island opsional, widget bawaan, capture pengguna, pemasangan aplikasi Windows teruji, serta hasil uji perangkat dan performa. Android mengikuti hasil penerimaan terpisah. |
 | **D · Harness Beta** | 11–13 | Paket Linux Harness, draft widget dengan preview dan persetujuan, serta computer use lokal dengan scope, consent, Stop, dan batas kemampuan yang jelas. |
 | **E · ConstOS 1.0** | 14–15 | Paket dan ISO bertanda tangan, update/rollback teruji, hardware yang didukung terdokumentasi, dan batas Harness dibuktikan di sesi Wayland nyata. |
@@ -147,7 +176,7 @@ Setiap item yang mulai dikerjakan harus mencatat pemilik perubahan, dependensi, 
 
 | Jalur | Dependensi dan prioritas |
 | --- | --- |
-| Live dan installer | P0: boot, console recovery, pemisahan live/installed, install, reboot, dan jalur update/recovery. Polesan visual tidak boleh menghalangi diagnosis atau instalasi. |
+| Live dan installer | P0 mencakup alur boot ISO, wizard, preflight, instalasi, reboot tanpa ISO, SDDM, dan Hyprland dari build yang sama. Tahapan, paket hari pertama, dan batas scope ada di [spesifikasi installer](docs/installer-plan.md). |
 | Shell dan Const Hub | Buktikan launcher dan satu kontrol audio dengan provider bersama sebelum memperluas shell. Fase 04 menetapkan kontrak state, fase 06 menetapkan token, dan fase 07 mengganti satu permukaan pada satu waktu. Fase 08 memperluas collector untuk Monitor dan widget. |
 | Welcome dan Const Store | Validasi Welcome pada target. Pakai katalog yang sama untuk Recommended Apps dan Const Store. Discovery dan transaksi milik Store, konfigurasi desktop milik Hub. |
 | Capture pengguna | Screenshot dasar diuji di fase 02; fase 07A menyelesaikan UI serta rekaman video/audio sebelum Desktop Beta. Probe portal dilakukan lebih awal; fitur ini tidak menunggu Harness. |
@@ -210,24 +239,25 @@ Revisi kiosk di atas commit `bcd137b2` mengikuti laporan pengguna dari VM. Pada 
 | Kelompok | Pilihan awal | Alur yang harus bekerja |
 | --- | --- | --- |
 | Desktop inti | Foot, Thunar, Wofi, Waybar, Mako, Swaylock/Wlogout | Buka terminal, file manager, launcher, notifikasi, dan lock/logout dari keyboard maupun mouse. |
-| Harian | Firefox sebagai calon default, editor teks ringan, viewer gambar/PDF, pengelola arsip sesuai hasil uji paket | Buka URL, file, folder, gambar, dan PDF dari launcher atau Thunar. Asosiasi MIME dan ikon tampil konsisten. |
+| Harian | Firefox ada di sumber sekarang. Wizard target merekomendasikan Brave dan menyediakan alternatif sesuai [spesifikasi browser](docs/installer-plan.md#pilihan-browser). Thunar, editor teks, viewer gambar/PDF, dan pengelola arsip tetap baseline. | Buka URL jika browser dipilih, serta file, folder, gambar, dan PDF dari launcher atau Thunar. Asosiasi MIME dan ikon tampil konsisten. |
 | Integrasi perangkat | NetworkManager, BlueZ dengan UI pairing yang diuji, PipeWire/WirePlumber, pavucontrol, portal Hyprland/GTK | Wi-Fi, pairing yang didukung, pengalihan audio output, file chooser, screen share, dan clipboard Wayland. |
 | Diagnostik | `btop`, `fastfetch`, utilitas disk, serta `const doctor` pada sistem terpasang | Lihat status hardware, kernel, memory, storage, dan log kegagalan dari TTY. |
-| Opsional | Dev toolchain, editor IDE, Flatpak jika dipilih, Const Harness, serta engine/model lokal | Satu jalur pemasangan per aplikasi, ukuran dan dependensi tercatat, dan ada jalur uninstall yang mempertahankan data pengguna. |
+| Opsional | Dev toolchain, editor IDE, aplikasi Flatpak pilihan, Const Harness, serta engine/model lokal | Satu jalur pemasangan per aplikasi, ukuran dan dependensi tercatat, dan ada jalur uninstall yang mempertahankan data pengguna. |
 
 - [ ] Periksa launcher `.desktop`, nama icon, kategori, file yang dipasang, dan `mimeapps.list`. Pastikan setiap menu menunjuk ke executable yang benar. Pilih backend portal secara eksplisit per interface setelah menguji sesi yang diluncurkan SDDM. [Desktop Entry Specification](https://specifications.freedesktop.org/desktop-entry-spec/latest/) · [portals.conf](https://flatpak.github.io/xdg-desktop-portal/docs/portals.conf.html)
 - [ ] Definisikan service system dan user yang perlu aktif. Pisahkan autostart compositor dari service yang butuh supervisi. Impor env Wayland dari sesi aktual, hindari asumsi `wayland-1`, dan uji logout/login berulang agar proses panel, tray, dan notifikasi tidak ganda.
 - [ ] Uji baseline screenshot `Print` dan aksi Waybar: area yang dipilih sesuai hasil clipboard, Escape membatalkan tanpa menimpa clipboard, dan kegagalan tool terlihat. Catat perbedaan konfigurasi Lua yang di-stage dengan konfigurasi `.conf` lama; hanya jalur yang benar-benar dimuat boleh diklaim didukung.
 - [ ] Uji input teks beraksen/non-Latin, font fallback, pemilihan layout, mount/eject media lepas-pasang, trash, secret agent, dan dialog otorisasi dari sesi SDDM. Pilih paket tambahan berdasarkan skenario yang didukung; jangan menganggap toolkit otomatis menyelesaikan integrasi sesi.
 
-**Fase lulus jika** desktop terpasang pada VM bisa membuka halaman lokal dari browser, mengakses file dan arsip, menyalin teks/gambar, memindah audio output, dan menjalankan diagnosis dasar. Catat paket opsional dan pengaruhnya pada ukuran instalasi.
+**Fase lulus jika** desktop terpasang pada VM bisa membuka halaman lokal dari browser yang dipilih, mengakses file dan arsip, menyalin teks/gambar, memindah audio output, dan menjalankan diagnosis dasar. Jalur **No browser** tetap bisa memakai desktop inti. Catat paket opsional dan pengaruhnya pada ukuran instalasi.
 
 ## Fase 03 · Installer, sistem terpasang, dan recovery
 
-- [ ] **Pilih satu jalur Calamares awal.** Rekomendasi online untuk UEFI dengan disk kosong. Tentukan paket Calamares yang dipakai dan bundel settings, modules, branding, serta launcher yang benar-benar dirujuk. Periksa versi ABI modul. Lakukan preflight jaringan, waktu, keyring, storage, dan sumber paket sebelum partisi dijalankan.
+- [x] **Buktikan jalur utama di VM UEFI.** Build P0 9 November mencakup Cage dan Calamares, pemilihan satu disk kosong, instalasi, unmount, **Restart**, boot tanpa ISO, dan login SDDM ke Hyprland.
+- [ ] **Lengkapi penerimaan wizard.** Gunakan [urutan wizard](docs/installer-plan.md#langkah-wizard-dan-keputusan-ui) untuk Network, pemilih locale/zona waktu, pilihan browser, retry sebelum partisi, dan skenario dua disk. Pertahankan preflight jaringan, waktu, keyring, storage, dan sumber paket sebelum partisi.
 - [ ] **Pisahkan live dan installed.** Target menggunakan manifest dan paket konfigurasi yang ditentukan installer. Hapus akun live, autologin, aturan sudo live, unit khusus ISO, serta repo file sementara dari target. Aktifkan NetworkManager, display manager, dan layanan sesi yang diperlukan lewat jalur instalasi yang sama di VM dan perangkat fisik.
-- [ ] **Kirim paket uji sejak installer pertama.** Buat `constos-desktop` minimal untuk konfigurasi yang dipakai target dan live. Pakai repo staging yang terkontrol untuk tes install dan update. Fase 14 membawa jalur ini ke penerbitan, penandatanganan, dan rotasi keyring.
-- [ ] **Tetapkan layout disk.** Mulai dari GPT, ESP, dan Btrfs dengan layout `@`, `@home`, dan `@snapshots` jika integrasi Snapper lulus. Verifikasi mount, UUID, `fstab`, initramfs, dan bootloader target. Uji partisi pada disk VM kosong terlebih dahulu. Konfirmasi disk harus memakai identitas perangkat yang cukup jelas untuk membedakan dua disk berukuran sama.
+- [ ] **Paket target dan browser.** Pakai `constos-desktop` yang ada untuk sesi terpasang. Integrasikan pilihan browser dalam transaksi target, verifikasi signature dan handler pada akun baru, lalu uji **No browser**. Fase 14 membawa jalur paket lokal ke penerbitan, penandatanganan, dan rotasi keyring.
+- [ ] **Disk kosong dan Review.** Pindahkan konfirmasi akhir dari kolom path ke aksi **Install ConstOS** di Review sesuai [kontrak pemilihan disk](docs/installer-plan.md#kontrak-pemilihan-disk). Pertahankan GPT, ESP, Btrfs dengan `@`, `@home`, dan `@snapshots`. Buktikan penolakan saat identitas berubah serta verifikasi mount, UUID, `fstab`, initramfs, dan bootloader target.
 - [ ] **Uji recovery.** Buat konfigurasi Snapper dan retensi yang terbatas. Uji restore satu file, lalu satu recovery sistem yang benar-benar bisa boot. Dokumentasikan batas snapshot untuk ESP, `/boot` terpisah, data pengguna, dan layanan dengan state eksternal. Simpan prosedur rescue dari ISO/TTY saat greeter atau compositor gagal.
 - [ ] **Perluas mode satu per satu.** LUKS masuk setelah prompt unlock, suspend/reboot, dan recovery diuji. Offline install memakai snapshot paket dan keyring yang tersedia di ISO atau mekanisme lain yang dipilih dan diverifikasi. Dual boot masuk setelah uji OVMF dan disk dengan partisi yang harus dipertahankan.
 
@@ -393,6 +423,8 @@ Mulai sebagai surface yang opsional dengan pola interaksi ConstOS. Saat referens
 
 ## Fase 11 · Paket Linux Const Harness
 
+Pilihan Yes/No yang ditinjau pada [prototipe installer](docs/installer-plan.md#placeholder-const-harness) tidak masuk transaksi rilis awal. Paket dan lifecycle diuji pada target terpasang di fase ini.
+
 - [ ] Bangun upstream di Linux dengan `pnpm --filter @const/harness-desktop package:linux:pacman`. Periksa paket yang dihasilkan, executable, file `.desktop`, icon, resource native, dan dependensi `node-pty`. Pilih jalur konsumsi artefak paket yang sudah dapat diverifikasi atau PKGBUILD yang memasang artefak binary dengan checksum. Ganti resep lokal yang saat ini hanya membuat launcher ke `/opt/ConstHarness/const-harness-desktop`. [Resep paket saat ini](packages/const-harness/PKGBUILD)
 - [ ] Uji instalasi dan upgrade pada target bersih. Dari launcher, cek startup di Wayland, PTY, pemilihan workspace, browser pane, clipboard, screen sharing aplikasi biasa, session restore, alur login/offline, serta data yang dipertahankan saat upgrade. Gunakan update pacman untuk edisi ConstOS dan sesuaikan perilaku update dalam aplikasi untuk paket distro.
 - [ ] Jalankan Harness sebagai pengguna biasa dan sesuai sesi aktif. Jika pengguna memilih autostart, ikat lifecycle ke sesi dan impor variabel saat login. App tetap dapat digunakan ketika broker computer use tidak tersedia. Tampilkan kapabilitas berdasarkan hasil handshake dan izin runtime.
@@ -458,10 +490,11 @@ Rust helper berjalan di sesi pengguna. Akses dibedakan per capability antara **m
 
 | Urutan | Perubahan | Bukti sebelum lanjut |
 | --- | --- | --- |
-| 1 | **Validasi Cage dan wizard.** Build Linux baru dari SHA yang dicatat, lalu gunakan VM UEFI dengan disk uji. | Dua entri GRUB, Welcome berbahasa Inggris, Disk dengan konfirmasi, Summary, cancel dan buka ulang, instalasi, reboot tanpa ISO, serta login SDDM. Ikuti [panduan pengujian terpadu](docs/acceptance-guide.md). |
-| 2 | **Irisan desktop pertama.** Launcher Liquid Glass, satu halaman Audio di Const Hub, dan satu kontrol volume di Quick Settings. Siapkan alur migrasi konfigurasi sebelum cutover. | Keyboard dan pemulihan fokus, blur/opak, 100–200% scale, dua output, volume berubah pada kedua UI, dan fallback ketika shell gagal. |
-| 3 | **Desktop harian.** Uji Welcome, lanjutkan ke Const Store dari katalog yang sama, dan tambahkan halaman Terminal di Hub. | Instalasi dan peluncuran Flatpak dari akun biasa, hasil Library akurat, serta override Foot bertahan setelah update. |
-| 4 | **Surface opsional.** Kerjakan dock, widget bawaan, lalu Dynamic Island setelah sumber data dan aksi tersedia. | Disable independen, fullscreen, klik di area transparan, work area stabil, hotplug, dan state yang bertahan setelah login ulang. |
-| 5 | **Harness.** Paket Linux yang bisa dibuka, draft widget, lalu observasi dan aksi Wayland sesuai capability. Probe portal bisa dilakukan sejak langkah 1 di target Hyprland. | Draft ditinjau sebelum diterapkan. Buktikan penolakan, Stop, dan hasil aksi untuk setiap capability yang dipromosikan. |
+| 1 | **Reproduksi baseline.** Build Linux baru dari SHA yang dicatat, lalu gunakan VM UEFI dengan disk uji. | Catat titik gagal aktual pada GRUB, Cage, Calamares, reboot tanpa ISO, login SDDM, atau startup Hyprland sesuai [panduan pengujian terpadu](docs/acceptance-guide.md). |
+| 2 | **Benahi installer sampai login.** Kerjakan alur, Review, progres, dan handoff sesuai [spesifikasi installer](docs/installer-plan.md#urutan-perubahan-dan-gerbang). | Instal ulang ke disk kosong, lepas ISO, login dengan akun baru dan buka desktop. Uji cancel, disk berubah, dan gagal unduh sebelum partisi. |
+| 3 | **Pilihan installer dan desktop hari pertama.** Integrasikan pilihan jaringan, akun, dan browser. Uji Welcome desktop dari akun baru. | Brave dan alternatif terverifikasi, pilihan No browser bekerja, SDDM meminta kata sandi, aplikasi inti terbuka, dan Welcome muncul sekali. |
+| 4 | **Irisan desktop pertama.** Launcher Liquid Glass, halaman Audio di Const Hub, dan kontrol volume di Quick Settings. Siapkan migrasi konfigurasi sebelum cutover. | Keyboard dan pemulihan fokus, blur/opak, skala 100–200%, dua output, volume berubah pada kedua UI, dan fallback ketika shell gagal. |
+| 5 | **Desktop harian dan surface opsional.** Lanjutkan Const Store, pengaturan Foot, dock, widget, dan Dynamic Island. | Transaksi Flatpak dari akun biasa, override terminal bertahan, disable independen, fullscreen, work area stabil, dan hotplug. |
+| 6 | **Harness.** Paket Linux yang bisa dibuka, draft widget, lalu observasi dan aksi Wayland sesuai capability. Probe portal dapat dilakukan pada target Hyprland di langkah 2. | Draft ditinjau sebelum diterapkan. Buktikan penolakan, Stop, dan hasil aksi untuk setiap capability yang dipromosikan. |
 
-Backlog ini memprioritaskan pekerjaan desktop dan Harness. Capture pengguna, Wine, recovery, serta pengujian hardware tetap mengikuti gerbang fase masing-masing. Bukti VM lama tetap tercatat pada bagian awal roadmap. Toolkit shell dan cakupan input Wayland ditetapkan dari hasil spike. Repo Dynamic Island Windows masuk review desain pada fase 09 setelah tautannya tersedia.
+Langkah 1–3 memulihkan fondasi sebelum backlog desktop dilanjutkan. Capture pengguna, Wine, recovery, serta pengujian hardware tetap mengikuti gerbang fase masing-masing. Bukti VM lama tetap tercatat pada bagian awal roadmap. Toolkit shell dan cakupan input Wayland ditetapkan dari hasil spike. Repo Dynamic Island Windows masuk review desain pada fase 09 setelah tautannya tersedia.

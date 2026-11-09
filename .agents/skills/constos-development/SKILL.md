@@ -9,6 +9,8 @@ description: Gunakan saat mengubah atau meninjau profil ISO, staging desktop, in
 
 Path kode di bawah relatif terhadap root repositori. Baca [AGENTS.md](../../../AGENTS.md), [roadmap](../../../implementation_plan.md), dan [arsitektur](../../../docs/architecture.md). Untuk build/live boot, baca [panduan build](../../../docs/build-guide.md). Jangan menduplikasi status fitur atau daftar perintah instalasi paket ke skill ini.
 
+Untuk installer, browser, atau handoff ke desktop, baca [spesifikasi installer](../../../docs/installer-plan.md) sebelum mengubah kode. Saat reproduksi, catat batas antara kegagalan wizard, backend, boot disk, autentikasi, dan startup sesi. Uji handoff sampai login dari disk pada build yang sama sebelum melanjutkan pekerjaan shell.
+
 ## 1. Tentukan jalur efektif
 
 - Untuk ISO, buka `iso/buildiso.sh`, profil, manifest, dan overlay yang terdampak. Cocokkan file sumber dengan hasil staging; jangan mengedit `iso/work/` atau `iso/out/` sebagai perbaikan permanen.
