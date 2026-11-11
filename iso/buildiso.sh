@@ -95,6 +95,12 @@ for name in constos-core constos-desktop; do
 done
 install -m 0644 -- "$packages_dir/SHA256SUMS" "$packages_dir/SOURCE_SHA256SUMS" "$package_root/"
 
+# Reuse the verified core binary and activation files without installing target policy.
+core_archive=("$package_root"/constos-core-*.pkg.tar.zst)
+bsdtar --no-same-owner -xpf "${core_archive[0]}" -C "$root" \
+    usr/bin/constd usr/lib/systemd/user/constd.service \
+    usr/share/dbus-1/services/org.constos.Monitor1.service
+
 install -Dm755 -- "$installer_dir/constos-tui" "$root/usr/bin/constos-tui"
 
 printf 'Staged ConstOS profile: %s\n' "$profile"

@@ -39,7 +39,6 @@ gptfdisk
 bubblewrap
 socat
 python
-python-psutil
 python-pip
 procps-ng
 pciutils

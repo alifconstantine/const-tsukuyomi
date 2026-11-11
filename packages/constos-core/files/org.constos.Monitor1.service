@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=org.constos.Monitor1
+Exec=/usr/bin/constd
+SystemdService=constd.service

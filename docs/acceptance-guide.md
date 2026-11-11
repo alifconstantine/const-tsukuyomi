@@ -65,8 +65,10 @@ Uji skenario berikut setelah reboot dari disk. Gunakan fixture lokal nonpribadi 
 | Bagian | Skenario dan bukti |
 | --- | --- |
 | Launcher dan file | Buka browser yang terpasang, editor, viewer gambar/PDF, dan arsip dari launcher. Buka file serta, jika browser dipilih, URL dari Nautilus. Periksa default, nama, dan ikon. Baseline lama memakai Firefox |
+| Jendela dan workspace | Buka delapan Kitty dengan Super+Enter dalam satu workspace, lalu coba aplikasi lain. Periksa tile, Super+panah, Super+Shift+panah, Alt+Tab, Super+F, dan overview Super+Tab. Cocokkan jendela yang terlihat dengan state compositor dan bar. [Audit workspace](audits/2026-11-11-workspace-windows.md) |
+| Shortcut aplikasi | Super+B membuka browser default akun. Uji pemberitahuan jika default belum tersedia. Periksa Super+N membuka Mousepad dan Super+Esc membuka Quick Settings. [Shortcut desktop](desktop-shortcuts.md) |
 | Clipboard teks | Copy/paste teks Indonesia, beraksen, dan non-Latin antar aplikasi; label/font tetap terbaca |
-| Screenshot area | Tekan Print, pilih area berisi fixture, lalu paste gambar di aplikasi penerima. Isi dan dimensi harus sesuai pilihan |
+| Screenshot area | Tekan Print atau Super+Shift+S, pilih area berisi fixture, lalu paste gambar di aplikasi penerima. Isi dan dimensi harus sesuai pilihan |
 | Screenshot cancel | Isi clipboard dengan teks yang diketahui, mulai seleksi lalu Escape. Paste kembali; clipboard lama tidak boleh berubah |
 | Screenshot layar/error | Jalankan aksi layar dari panel dan periksa hasil. Uji tool/backend gagal hanya pada VM disposable; error harus terlihat tanpa notifikasi sukses palsu |
 | Audio | Putar audio fixture, ubah volume/mute serta output melalui pavucontrol; dengarkan hasil. Jika perangkat input tersedia, periksa sumber dan level mikrofon secara terpisah |

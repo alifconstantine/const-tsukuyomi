@@ -27,6 +27,7 @@ file_permissions=(
   ["/usr/local/bin/const-sandbox"]="0:0:755"
   ["/usr/bin/constos-install"]="0:0:755"
   ["/usr/bin/constos-tui"]="0:0:755"
+  ["/usr/bin/constd"]="0:0:755"
   ["/usr/lib/constos-installer/backend.py"]="0:0:755"
   ["/usr/lib/constos-installer/kiosk"]="0:0:755"
   ["/usr/lib/constos-installer/live-session"]="0:0:755"

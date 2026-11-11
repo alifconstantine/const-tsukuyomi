@@ -1,5 +1,7 @@
 # Audit Teknis: Pemulihan Snapper, Target Safety, dan Rust Subsystem Collector (constd / constosctl)
 
+Catatan historis prototipe. Cara memanggil daemon setelah cutover ada di [kontrak telemetri sesi](../architecture.md#telemetri-sesi).
+
 **Tanggal:** 7 November 2026  
 **Edisi Target:** Const Tsukuyomi (CachyOS x86_64 Base, BORE Scheduler, Hyprland)  
 **Lingkungan Eksekusi:** Linux 7.3.1-1-cachyos, Rust 1.99.1, Python 3.14.9  

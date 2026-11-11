@@ -1,7 +1,7 @@
 # Maintainer: ConstOS
 pkgname=constos-desktop
 pkgver=0.1.0
-pkgrel=7
+pkgrel=8
 pkgdesc='ConstOS Hyprland desktop, session and installed boot themes'
 arch=('any')
 url='https://github.com/alifconstantine/const-tsukuyomi'

@@ -7,5 +7,5 @@ description = "Kernel and hardware monitoring daemon for ConstOS"
 
 [dependencies]
 const-collector = { path = "../const-collector" }
-serde = { workspace = true }
 serde_json = { workspace = true }
+zbus = "5"

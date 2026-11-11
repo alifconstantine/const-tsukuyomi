@@ -13,7 +13,7 @@ ConstOS dikembangkan sebagai distro Linux untuk pengembangan perangkat lunak dan
 | Build ISO | Profil Archiso dengan tema boot/login, sesi desktop, paket lokal, dan installer berhasil dibangun di Linux. Wrapper build mencatat checkout bersih, checksum paket/sumber lokal, symlink staging, versi paket, log, dan checksum ISO. Runner Live UEFI telah lulus pada Linux/KVM dan Windows/WHPX. | Jalankan workflow pada runner GitHub tepercaya yang sudah dikonfigurasi. Uji boot pada perangkat fisik. |
 | Sesi live | Cage dan Foot membuka TUI yang diimpor dari Ryoku. Kedua entri GRUB tersedia, dengan splash Plymouth dan tema GRUB yang diadaptasi. | Uji Wi-Fi dan tampilan wizard pada resolusi lain. |
 | Sistem dan installer | Wizard menyediakan Network dan pilihan Firefox, Chromium, Zen, atau No browser. Backend memilih transaksi bertanda tangan sebelum partisi dan menulis MIME browser pada akun baru. Firefox dan No browser lulus instalasi pada kandidat Calamares sebelumnya. | Uji instalasi dan handler Chromium serta Zen. |
-| Diagnosis, telemetri, dan AI | `constos-core` memasang CLI Rust `const` pada sistem terpasang. `const doctor` memeriksa kernel, swap ZRAM, unit systemd yang gagal, ruang tersedia di `/`, serta konfigurasi Snapper dan mount `/.snapshots`. Collector dan daemon Rust `constd` lulus uji host pada bukti di bawah. | Uji dua pemeriksaan storage pada target terpasang. Integrasikan daemon Rust dan sambungkan UI sesi ke kontrak IPC. Profil live saat ini tidak mewajibkan Harness atau Ollama. |
+| Diagnosis, telemetri, dan AI | `constos-core` memasang CLI Rust `const` serta daemon `constd` dengan aktivasi D-Bus sesi. Staging live mengambil daemon dari paket core. `const doctor` memeriksa kernel, swap ZRAM, unit systemd yang gagal, ruang tersedia di `/`, serta konfigurasi Snapper dan mount `/.snapshots`. | Buktikan Diagnostics pada ISO baru. Sambungkan UI sesi ke kontrak snapshot. Uji dua pemeriksaan storage pada target terpasang. |
 | Pembaruan | `const update` membuka transaksi penuh pacman dari terminal pada sistem terpasang. | Siapkan repo rilis ConstOS bertanda tangan dan tuntaskan skenario update, reboot, dan recovery pada kandidat rilis. |
 | Capture desktop | Print, Alt+Print, dan launcher memanggil `constos-screenshot`. Bukti screenshot dari ISO antara tetap di bawah. | Ulangi screenshot, cancel, dan portal di sesi Dux. |
 | Shell dan aplikasi target | Target menjalankan paket Dux resmi dengan preset Const. Kitty/Fish memakai Fastfetch dengan simbol Const ASCII khusus terminal. Launcher, Quick Settings, notifikasi, lock, dan Nautilus diuji pada kandidat desktop sebelumnya. MP4 dan keluaran audio virtual lulus pada revisi playback. | Uji default aplikasi lain, aksesibilitas, beberapa monitor, dan audio perangkat fisik. |
@@ -352,6 +352,14 @@ Acuan awal tersedia di [design.md](design.md): identitas hitam/putih, aksen biru
 
 ## Fase 07 · Fungsi di balik menu dan shell
 
+Prioritaskan tiling dan shortcut desktop sebelum port backend installer. Setelah jalur desktop stabil, kerjakan screenshot dan perekaman sebagai perubahan tersendiri agar setiap regresi mudah ditelusuri. [Shortcut desktop](docs/desktop-shortcuts.md) · [Rencana migrasi Rust](docs/rust-migration.md)
+
+- [x] Reproduksi Kitty terakhir menjadi maximized di VM dengan delapan kali Super+Enter. Terapkan aturan maximize khusus Kitty dan buktikan delapan tile, Super+F, serta navigasi fokus. [Audit dan penerapan](docs/audits/2026-11-11-workspace-windows.md)
+
+**Bukti shortcut · 11 November 2026.** Checkout `c5bd13a` dengan perubahan ini menghasilkan `constos-desktop-0.1.0-8-any` dengan SHA-256 `39d036504bfad0cc9b1493a7a9c5ffc286a023008ffea37fd091caaee1743658`. Di salinan disk QA `edd97e6` dengan QEMU/KVM 11.1.3, Hyprland `0.57.2-1` dan Dux `2.1.2-1`, Super+B membuka Firefox default, Super+N membuka Mousepad, dan Super+Esc membuka Quick Settings. Super+Shift+S menyalin PNG seleksi 261 × 186 dan Escape menjaga clipboard saat batal. Welcome baru tampil pada 1280 × 800. Enam tes desktop lulus. Bukti ada di `iso/out/constos-kitty-tiling-20261111.bxCfi0/`. Chromium, Zen, perangkat fisik, dan multi-monitor masih terbuka.
+
+Paket final di subdirektori `final-packages/` memiliki SHA-256 `c77011d16aec58cd42e93314bf1f36968c51f5e2daa49977d3a0b31b990a7b18`. Perbandingan arsip memverifikasi 112 entri payload yang identik dengan paket VM setelah merapikan metadata dependensi.
+
 | Menu | Perilaku pertama yang dikirim |
 | --- | --- |
 | Launcher | Cari aplikasi, buka shortcut Settings dan Monitor, dukung riwayat/pinned items dan keyboard. Pakai mekanisme Desktop Entry untuk meluncurkan aplikasi. Sumber pencarian file/command dapat ditambahkan setelah ada opt-in dan batas direktori. |
@@ -373,6 +381,8 @@ Acuan awal tersedia di [design.md](design.md): identitas hitam/putih, aksen biru
 **Fase lulus jika** setiap item yang terlihat punya fungsi atau alasan disabled, hasilnya tampil kembali di UI, dan fokus pulih ke aplikasi sebelumnya setelah panel ditutup. Uji input cepat, monitor dicabut, daemon restart, izin ditolak, serta bahasa dengan label panjang.
 
 ## Fase 07A · Screenshot, rekaman video, dan rekaman audio
+
+Urutan implementasi mengikuti [rencana capture yang merujuk Ryoshot](docs/capture-plan.md). Shortcut Super+Shift+S memakai seleksi area sampai toolbar siap.
 
 Ini fitur pengguna desktop, terpisah dari observasi agen di fase 12. Gunakan aplikasi/backend Wayland yang sudah tersedia sebelum menulis encoder atau layanan capture sendiri. `grim`/`slurp` adalah baseline screenshot saat ini; kandidat recorder dipilih setelah uji portal, audio, format, dan konsumsi resource pada build target. Tidak ada dukungan window/region, pause, encoder hardware, atau audio sistem yang diklaim hanya karena paket terpasang.
 
@@ -407,7 +417,10 @@ Riset dokumentasi upstream dan audit repositori selesai pada 8 November 2026. De
 
 - [x] Tulis collector Rust dengan fixture dari Linux dan output `const status --json` sebagai klien pertama. `crates/const-collector`, CLI Rust, dan `constd` selesai dibangun dan lulus 5 uji fixture serta pengujian host riil.
 - [x] Kirim `const doctor` lewat `constos-core`. Uji sebagai akun biasa pada target VM dari desktop dan TTY, termasuk unit sistem yang sengaja gagal. Lihat bukti Doctor di atas.
-- [ ] Setelah paket daemon Rust dan konsumennya siap, ganti dua salinan prototipe Python dan unit HTTP lama dengan satu sumber paket serta IPC sesi. Uji status pada akun biasa dan batasi respons pada metrik yang diperlukan UI.
+- [x] Ganti dua salinan prototipe Python dan unit HTTP dengan `constd` Rust dari paket core serta aktivasi D-Bus sesi. Uji host dan VM terpasang mencocokkan kernel dan total RAM dari akun biasa. [Kontrak telemetri](docs/architecture.md#telemetri-sesi)
+- [ ] Buktikan aktivasi dan snapshot dari Diagnostics pada ISO baru. Hubungkan Monitor dan widget saat konsumennya tersedia. [Rencana migrasi Rust](docs/rust-migration.md)
+
+**Bukti cutover · 11 November 2026.** Checkout `c5bd13a` dengan perubahan ini dan Rust 1.99.1 membangun `constos-core-0.1.0-7-x86_64` dengan SHA-256 `3dcd0a1f8ddaba7fa25ee0d10266e16a4d36e2e0dcf42e81f91d0c7608cbc226`. Sebelas tes Rust, build paket, dan staging lulus. Di bus privat host, pemanggilan pertama mengaktifkan daemon dan metode yang tidak ada ditolak. Pada salinan disk QA `edd97e6` di QEMU/KVM 11.1.3, paket terpasang lewat pacman. D-Bus user mengaktifkan daemon untuk UID akun sesi, melaporkan RAM yang cocok dengan `/proc/meminfo` dan versi kernel yang cocok dengan `uname`. Stop melepaskan nama bus, dan panggilan berikutnya mengaktifkan daemon lagi. Bukti ada di `iso/out/constos-constd-20261111.ZurROV/` dan `iso/out/constos-workspace-vm-20261111.MI2Mjw/guest-checks.log`. Build ISO baru memerlukan sudo pada host build dan belum dijalankan.
 
 | Metrik | Implementasi dan cara memeriksa |
 | --- | --- |

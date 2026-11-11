@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! browser=$(xdg-settings get default-web-browser) || [[ -z $browser ]]; then
+    notify-send --app-name=ConstOS 'No default web browser' 'Install a browser or set it as your default.'
+    exit 1
+fi
+
+if ! gtk4-launch -- "$browser"; then
+    notify-send --app-name=ConstOS 'Could not open the web browser' 'Check your default browser in the desktop settings.'
+    exit 1
+fi

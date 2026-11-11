@@ -23,7 +23,7 @@ for asset in theme.json wallpaper.svg; do
     install -Dm644 -- "$source_dir/dms/$asset" "$root/usr/share/constos/desktop/$asset"
 done
 install -Dm644 -- "$source_dir/fastfetch/const.txt" "$root/usr/share/constos/desktop/const.txt"
-for helper in constos-session constos-session-start constos-lock constos-screenshot; do
+for helper in constos-session constos-session-start constos-lock constos-browser constos-screenshot; do
     install -Dm755 -- "$source_dir/scripts/$helper" "$root/usr/bin/$helper"
 done
 for unit in "$source_dir/systemd/user/"*; do

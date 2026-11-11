@@ -1,0 +1,7 @@
+[Unit]
+Description=ConstOS session telemetry
+
+[Service]
+Type=dbus
+BusName=org.constos.Monitor1
+ExecStart=/usr/bin/constd

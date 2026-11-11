@@ -183,6 +183,26 @@ def installer_runtime(probe):
     return bool(re.fullmatch(r"constos-tui [0-9.]+", version)), {"version": version}
 
 
+def constd_snapshot(probe):
+    name = "org.constos.Monitor1"
+    busctl = ("busctl", "--user", "--json=short", "call")
+    reply = json.loads(probe.run(*busctl, name, "/org/constos/Monitor1", name, "GetSnapshot"))
+    snapshot = json.loads(reply["data"][0])
+    owner = json.loads(probe.run(
+        *busctl, "org.freedesktop.DBus", "/org/freedesktop/DBus",
+        "org.freedesktop.DBus", "GetConnectionUnixUser", "s", name,
+    ))["data"][0]
+    total_kb = int(read_text("/proc/meminfo").splitlines()[0].split()[1])
+    valid = (
+        reply["type"] == "s"
+        and owner == os.getuid() != 0
+        and snapshot["cpu"]["kernel_release"] == os.uname().release
+        and snapshot["memory"]["mem_total_kb"] == total_kb
+        and snapshot["processes"]["total"] > 0
+    )
+    return valid, {"service": name, "same_user": owner == os.getuid(), "mem_total_kb": total_kb}
+
+
 def live_sessions():
     sessions = sorted(entry.name for entry in Path("/usr/share/wayland-sessions").glob("*.desktop"))
     return sessions == ["constos-installer.desktop"], {"sessions": sessions}
@@ -334,6 +354,7 @@ def baseline(probe):
     probe.check("versions", lambda: package_versions(probe))
     probe.check("boot_metadata", lambda: boot_metadata(probe))
     probe.check("installer_runtime", lambda: installer_runtime(probe))
+    probe.check("constd_snapshot", lambda: constd_snapshot(probe))
     probe.check("live_sessions", live_sessions)
     probe.check("console_boot_target", lambda: (
         "systemd.unit=multi-user.target" in shlex.split(read_text("/proc/cmdline")),

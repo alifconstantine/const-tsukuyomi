@@ -12,12 +12,17 @@ Item {
     readonly property var essentials: [
         { chord: "Super + Space", title: "Launcher", description: "Find and open applications.", command: ["dms", "ipc", "call", "spotlight", "toggle"] },
         { chord: "Super + Return", title: "Terminal", description: "Open Kitty with Fish.", command: ["kitty"] },
+        { chord: "Super + B", title: "Web browser", description: "Open your default browser.", command: ["constos-browser"] },
         { chord: "Super + E", title: "Files", description: "Browse your files in Nautilus.", command: ["nautilus"] },
+        { chord: "Super + N", title: "Text editor", description: "Open Mousepad.", command: ["mousepad"] },
         { chord: "Super + comma", title: "Settings", description: "Personalise Dux Shell and your desktop.", command: ["dms", "ipc", "call", "settings", "focusOrToggle"] },
-        { chord: "Super + A", title: "Quick settings", description: "Network, volume and session controls.", command: ["dms", "ipc", "call", "control-center", "toggle"] },
+        { chord: "Super + Esc", title: "Quick settings", description: "Network, volume and session controls.", command: ["dms", "ipc", "call", "control-center", "toggle"] },
         { chord: "Super + Q", title: "Close window", description: "Close the focused application.", command: [] },
         { chord: "Super + 1–0", title: "Workspaces", description: "Switch workspace; add Shift to move a window.", command: [] },
-        { chord: "Print", title: "Screenshot", description: "Select an area; Alt + Print captures the screen.", command: ["constos-screenshot", "region"] }
+        { chord: "Super + Tab", title: "Workspace overview", description: "See and select open windows.", command: ["dms", "ipc", "call", "hypr", "toggleOverview"] },
+        { chord: "Super + ↑↓←→", title: "Window focus", description: "Focus a tile; add Shift to move it. Alt + Tab returns to the last window.", command: [] },
+        { chord: "Super + F", title: "Fullscreen", description: "Toggle fullscreen and return to your tiles.", command: [] },
+        { chord: "Super + Shift + S", title: "Screenshot", description: "Select an area. Print also selects an area; Alt + Print captures the screen.", command: ["constos-screenshot", "region"] }
     ]
 
     Column {

@@ -10,9 +10,9 @@ Dokumen ini menjelaskan batas komponen dan arah desain. Status serta bukti pener
 | --- | --- | --- |
 | Build dan boot | Profil Archiso di `iso/`, kernel CachyOS BORE, tema GRUB/Plymouth/SDDM, dan `iso/install-boot.sh`. Roadmap mencatat bukti build baseline serta verifikasi integrasi terbaru. | CI Linux, pembuktian seluruh skenario Boot UI di VM baru, dan bukti perangkat fisik. BIOS, Secure Boot, dan varian kernel/CPU bukan dukungan implisit. |
 | Sesi grafis | ISO men-stage TUI installer di Foot dan Cage. Pada target, `desktop/install.sh` memasang `constos.desktop` → `constos-session`, Lua Hyprland, layanan user, portal, dan asosiasi MIME. | Kiosk installer perlu dibuktikan pada ISO baru. Paket target menyediakan Dux Shell dengan preset Const. Uji fokus, multi-monitor, aksesibilitas, dan performa mengikuti gerbang desktop. |
-| Screenshot dan media | `constos-screenshot` dipakai oleh Print, Alt+Print, dan launcher; seleksi dibatalkan tanpa menimpa clipboard. | Pembuktian pada sesi live/installed penuh, lalu UI screenshot, editor anotasi, recorder video, dan recorder audio di fase 07A. |
+| Screenshot dan media | `constos-screenshot` dipakai oleh Print, Alt+Print, Super+Shift+S, dan launcher. Escape membatalkan seleksi dan menjaga clipboard. | Toolbar, editor anotasi, serta perekaman audio dan video mengikuti [rencana capture](capture-plan.md). |
 | Sistem dan storage | Konfigurasi ZRAM/sysctl, paket `constos-core`/`constos-desktop`, serta TUI dan backend Python untuk disk UEFI kosong. Baseline VM sebelumnya membuktikan Btrfs, reboot tanpa ISO, dan login SDDM. | Ulangi jalur utama pada build terbaru sesuai [spesifikasi installer](installer-plan.md). Uji recovery/rollback Snapper dari bootloader dan verifikasi perangkat fisik sebelum ConstOS 1.0. |
-| Telemetri | CLI Rust `const` dari `constos-core` membaca data sistem pada target terpasang. Profil live masih memuat prototipe Python `constd` HTTP GET/JSON. | Satu collector Rust bersama dan IPC sesi bertipe. HTTP lama dihapus ketika konsumen sudah bermigrasi. |
+| Telemetri | CLI Rust `const` dan daemon Rust `constd` berbagi collector. Paket `constos-core` memiliki binary, unit systemd user, dan descriptor aktivasi D-Bus sesi. Staging live mengambil ketiganya dari arsip core yang lolos checksum. | Hubungkan Monitor dan widget ke snapshot sesi, lalu tetapkan kontrak stream serta kebijakan sampling saat konsumen membutuhkannya. |
 | Harness dan sandbox | Resep paket Harness dan wrapper Bubblewrap tersedia. | Paket Linux lengkap, helper computer use sesi pengguna, izin per capability, dan sandbox teruji. Keberadaan wrapper bukan bukti seluruh workspace/desktop sudah terisolasi. |
 | Aset | Master simbol Const dan ekspor historis ada di `assets/`. Boot dan greeter memakai teks, progres, dan bentuk QML. Tema berada di `desktop/`. | Audit hak logo, aset lain, dan penerimaan boot baru masih diperlukan; pemilihan logo bukan bukti lisensi redistribusi. |
 
@@ -49,7 +49,6 @@ flowchart TD
 | `installer/` | Sumber TUI Ryoku yang diadaptasi, konfigurasi, manifest target, dan backend Python untuk disk UEFI kosong. |
 | `desktop/` | Sumber sesi, keybind, tema boot/fallback, unit user, helper screenshot/lock, portal, dan MIME. Hanya file yang dipasang `desktop/install.sh` atau `iso/install-boot.sh` boleh disebut efektif. |
 | `packages/` | Builder dan resep `constos-core`/`constos-desktop`, builder binary `constos-tui` khusus live, serta resep Harness. Paket Harness belum menyertakan binary upstream. |
-| `daemons/` | Prototipe daemon saat ini. Jangan menambah salinan collector baru untuk setiap UI. |
 | `assets/` | Aset visual sumber/ekspor yang dipakai, dengan provenance dan lisensi yang perlu dicatat. |
 | `docs/` | Arsitektur dan panduan teknis; tidak menyalin backlog atau menyimpan bukti media mentah. |
 | `tests/` | Runner build tercatat dan smoke Live UEFI; probe hanya berjalan pada VM uji, bukan service yang dikirim dalam ISO. |
@@ -64,13 +63,24 @@ flowchart TD
 
 ### Sistem lokal
 
-Collector membaca data Linux sebagai pengguna biasa dan memberi hasil bertipe beserta status unavailable/error. CLI, Monitor, widget, dan Harness memakai kontrak metrik yang sama. D-Bus sesi menjadi arah integrasi stream UI; schema, versi, resync, dan lifecycle ditetapkan ketika implementasi dibuat.
+Collector membaca data Linux sebagai pengguna biasa. CLI `const status --json` membaca satu snapshot langsung. Monitor, widget, dan Harness akan memakai kontrak metrik yang sama saat integrasinya dibuat.
 
 `const doctor` bekerja sebagai proses baca-saja di akun pengguna pada target terpasang. Ia memakai collector untuk identitas kernel, `/proc/swaps` untuk swap aktif, dan `systemctl` untuk daftar unit sistem yang gagal. Pemeriksaan storage membaca ruang yang tersedia di `/` melalui `df`, metadata konfigurasi root Snapper, dan status mount `/.snapshots` dari `/proc/self/mountinfo`. Pemeriksaan tidak memerlukan daemon Rust, layanan jaringan, atau elevasi.
 
 `const update` berjalan dari terminal interaktif di target terpasang. Setelah memeriksa identitas sistem dan penanda boot live, proses CLI menyerahkan terminal ke `sudo` dan `pacman -Syu`, sehingga status keluar diteruskan langsung. Otorisasi mengikuti kebijakan `sudo` pada target. Konfirmasi, lock transaksi, validasi paket, dan konfigurasi repo tetap milik pacman.
 
 Aksi yang memerlukan elevasi tidak dicampur dengan pembacaan metrik. Gunakan method sempit, validasi parameter, otorisasi per operasi, serta hasil aktual. UI tidak menganggap perubahan sukses hanya karena request terkirim. Jangan menambahkan listener jaringan atau aturan polkit tanpa password untuk menyederhanakan integrasi.
+
+### Telemetri sesi
+
+D-Bus sesi mengaktifkan `constd.service` sebagai pengguna yang memiliki bus. Nama dan interface `org.constos.Monitor1` memakai objek `/org/constos/Monitor1`. `GetSnapshot` menerima nol argumen dan mengembalikan string JSON dari `const_collector::SystemSnapshot`, dengan kolom yang sama seperti `const status --json`. Versi kontrak ada pada nama interface. Unit berjalan selama bus tersedia atau sampai dihentikan oleh systemd. Klien mengambil snapshot sesuai kebutuhan. Streaming, cache, dan subscription mengikuti integrasi UI.
+
+Cutover menghapus prototipe Python dan listener HTTP `127.0.0.1:9099`. Pencarian pada checkout sebelum migrasi menemukan rute prototipe dan referensi historis. Pemanggil eksternal yang pernah memakai HTTP perlu beralih ke D-Bus sesi. Snapshot membatasi informasi proses pada hitungan agregat.
+
+```bash
+busctl --user --json=short call org.constos.Monitor1 /org/constos/Monitor1 \
+  org.constos.Monitor1 GetSnapshot
+```
 
 ### Capture pengguna
 
@@ -99,6 +109,8 @@ Akun target dibuat dengan Fish dan akses sudo melalui grup wheel, sementara root
 Paket `constos-desktop` memasang panduan shortcut Quickshell/QML yang mengadaptasi `PageEssentials`, `ActionKey`, `PageTitle`, dan `Keycap` Ryoku. `guide.py` mengawasi proses, mengunci satu instance per akun, dan menyimpan `$XDG_STATE_HOME/constos/welcome-seen` hanya setelah penutupan normal. Service sesi memeriksa penanda pada login pertama; launcher bisa membuka ulang. Panduan tidak memuat gambar dan tidak memerlukan daemon, Hub, atau Store Ryoku. Recommended Apps tetap menjadi aplikasi GTK terpisah dengan katalog Flatpak yang sama.
 
 SDDM memanggil `constos-session` → `start-hyprland --` → Hyprland. Watchdog resmi memiliki proses compositor; wrapper tetap memiliki lock dan cleanup layanan sesi setelah watchdog berhenti. Dux Shell resmi menjalankan bar, launcher, Settings, lock, dan notifikasi; preset vendor Tsukuyomi tidak mengganti kode paket Dux. Fastfetch membaca turunan ASCII Const dari `/usr/share/constos/desktop/const.txt` khusus terminal.
+
+Default Hyprland untuk akun baru memakai Dwindle. Hyprland menangani fokus, fullscreen, dan perpindahan tile. Shortcut overview memanggil IPC Dux, dan shortcut browser meluncurkan Desktop Entry default sesi. [Daftar shortcut](desktop-shortcuts.md)
 
 Konfigurasi target GRUB memakai `GRUB_DISABLE_BOOTNEXT=true` untuk meniadakan daftar perangkat EFI tambahan. Generator kernel, submenu advanced/recovery, dan pengaturan firmware tetap berjalan. Installer menampilkan sebab kegagalan, tahap, dan path log privat. Retry otomatis hanya tersedia sebelum event storage; disk yang sudah memasuki storage harus diperiksa terlebih dahulu.
 Katalog memakai ID aplikasi tetap. Tombol **Install** menyiapkan remote dari descriptor Flathub yang disertakan paket Flatpak bila belum ada, lalu memasang ref untuk pengguna aktif. Remote dengan URL berbeda, dinonaktifkan, atau tanpa verifikasi GPG ditolak. UI menampilkan sukses setelah Flatpak mengonfirmasi ref. Inventaris saat ini masih membaca ID lintas scope dan perlu diselaraskan dengan aksi.

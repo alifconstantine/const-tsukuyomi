@@ -29,15 +29,17 @@ Arsitektur komponen, batas izin, dan pemisahan profil live dari sistem terpasang
 | Boot dan login | ISO membuka **Install Tsukuyomi** atau **Tsukuyomi Diagnostics** dari GRUB. Sesudah status boot Plymouth, sesi installer menampilkan judul piksel **TSUKUYOMI** dan **Preparing installer** sebelum Welcome. Login memakai Clockwork Orbital dari Ryoku melalui SDDM. Dux Shell mulai setelah autentikasi. |
 | Memori dan ZRAM | Overlay live mengatur `zram-generator` dengan `zstd`, `vm.swappiness = 100`, dan `vm.vfs_cache_pressure = 50`. |
 | Storage dan installer | TUI menampilkan disk kosong minimal 32 GiB. Konfirmasi di **Review** memulai pemeriksaan ulang disk dan unduhan paket bertanda tangan. Wizard menampilkan tahapan backend dan menawarkan **Reboot now** sesudah unmount. Rincian build dan batas uji ada di [roadmap](implementation_plan.md). |
-| Diagnosis dan telemetri | Paket `constos-core` memasang CLI Rust `const` pada sistem terpasang. Jalankan `const doctor` tanpa `sudo` untuk memeriksa kernel, swap ZRAM, unit systemd yang gagal, ruang tersedia di `/`, serta konfigurasi Snapper dan mount `/.snapshots`. `const status --json` menyajikan snapshot metrik. Integrasi daemon Rust `constd` dan Harness masih direncanakan. |
+| Diagnosis dan telemetri | Paket `constos-core` memasang CLI Rust `const` pada sistem terpasang. Jalankan `const doctor` tanpa `sudo` untuk memeriksa kernel, swap ZRAM, unit systemd yang gagal, ruang tersedia di `/`, serta konfigurasi Snapper dan mount `/.snapshots`. `const status --json` menyajikan snapshot metrik. Profil live dan paket core menyiapkan daemon Rust `constd` yang aktif saat diminta lewat D-Bus sesi. Integrasi Monitor, widget, dan Harness mengikuti roadmap. [Kontrak telemetri](docs/architecture.md#telemetri-sesi) |
 | Pembaruan | Jalankan `const update` dari terminal pada sistem terpasang. Jika pembaruan tersedia, pacman menampilkan paket OS dan aplikasi dari repo yang dikonfigurasi untuk dikonfirmasi dalam satu transaksi. Lihat [panduan update dan recovery](docs/acceptance-guide.md#update-dan-recovery) untuk cakupan dan verifikasi. |
 | Sandbox dan izin | Ada wrapper Bubblewrap yang menolak eksekusi saat `bwrap` tidak tersedia. Kebijakan akses dan integrasi agen masih perlu diuji. |
-| Screenshot dan rekaman | Print, Alt+Print, dan launcher memakai satu helper screenshot area/seluruh desktop dengan clipboard dan cancel. Preview, anotasi, dan recorder mengikuti fase 07A. |
+| Screenshot dan rekaman | Super+Shift+S dan Print memilih area. Alt+Print menyalin layar penuh. Preview, anotasi, dan recorder mengikuti [rencana capture](docs/capture-plan.md). |
 | Shell dan aplikasi harian | Dux Shell menyediakan panel, launcher, Quick Settings, notifikasi, dan lock. Terminal Kitty membuka Fish dengan simbol Const ASCII pada Fastfetch. `yay`, Git, dan base-devel disertakan untuk penggunaan AUR sebagai pengguna biasa. Aplikasi inti mencakup Nautilus, mpv, Mousepad, Ristretto, Evince, dan File Roller. |
 | Jaringan dan browser | Wizard menampilkan status NetworkManager dan dapat membuka pengaturan koneksi. Browser menawarkan Firefox sebagai rekomendasi, Chromium, Zen, dan No browser. Paket pilihan masuk transaksi unduhan sebelum perubahan disk. [Kontrak browser](docs/installer-plan.md#pilihan-browser) |
 | Pengembangan shell | Integrasi khusus Const Hub, adapter palet Harness, dan draft widget mengikuti roadmap. |
 | Welcome dan aplikasi opsional | Target membuka panduan shortcut QML pada login pertama, dengan kartu tindakan yang berasal dari Ryoku dan tanpa gambar. Welcome dan Recommended Apps bisa dibuka dari launcher. Katalog menawarkan LibreOffice, VLC, LocalSend, dan KeePassXC dari Flathub. Const Store direncanakan memakai katalog yang sama. |
 | Aplikasi Windows dan Android | Direncanakan untuk sistem terpasang. Wine disiapkan oleh installer agar pengguna bisa memasang dan membuka aplikasi Windows dari desktop tanpa setup runtime manual. Waydroid menyusul sebagai pilihan untuk APK yang kompatibel. Lihat [rancangan kompatibilitas aplikasi](docs/app-compatibility.md). |
+
+Gunakan Super+B untuk browser default, Super+Tab untuk overview Dux, dan Super+F untuk keluar dari fullscreen kembali ke tiling. [Daftar shortcut desktop](docs/desktop-shortcuts.md)
 
 ---
 
@@ -66,8 +68,6 @@ ConstOS/
 │   ├── dms/                       # Tema dan preset Const untuk Dux Shell
 │   └── wofi/                      # Launcher cadangan
 ├── installer/                     # TUI, konfigurasi, dan backend pemasangan UEFI
-├── daemons/
-│   └── constd/                    # Prototipe monitor /proc dan /sys
 └── packages/                      # Paket core/desktop dan resep Const Harness
 ```
 
@@ -91,6 +91,8 @@ sudo bash iso/buildiso.sh --packages-dir "$packages" --installer-dir "$installer
 ## Pengembangan
 
 ConstOS dikembangkan oleh Alif Constantine. Urutan integrasi, target rilis, dan kriteria verifikasi ada di [roadmap pengembangan](implementation_plan.md).
+
+Urutan port backend dan TUI installer, probe live, serta katalog desktop ada di [rencana migrasi Rust](docs/rust-migration.md).
 
 Arah visual ada di [design.md](design.md). Pemilih aksen, generator palet dari wallpaper, dan Const Hub masih direncanakan. [Audit desktop Ryoku](docs/audits/2026-11-08-ryoku-desktop.md) merekam perbandingan sebelum integrasi Dux.
 
