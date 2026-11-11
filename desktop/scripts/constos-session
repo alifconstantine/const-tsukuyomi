@@ -10,13 +10,17 @@ fi
 export XDG_CURRENT_DESKTOP=Hyprland
 export XDG_SESSION_DESKTOP=constos
 export XDG_SESSION_TYPE=wayland
+if [[ -r /etc/vconsole.conf ]]; then
+    source /etc/vconsole.conf
+    export XKB_DEFAULT_LAYOUT="${XKBLAYOUT:-us}" XKB_DEFAULT_VARIANT="${XKBVARIANT:-}"
+fi
 cleanup() {
     systemctl --user stop constos-session.target || true
     systemctl --user stop xdg-desktop-portal.service xdg-desktop-portal-hyprland.service xdg-desktop-portal-gtk.service || true
     systemctl --user unset-environment WAYLAND_DISPLAY DISPLAY HYPRLAND_INSTANCE_SIGNATURE XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE || true
 }
 trap cleanup EXIT
-Hyprland "$@" 9>&- &
+start-hyprland -- "$@" 9>&- &
 compositor=$!
 trap 'kill -TERM "$compositor" 2>/dev/null || true' HUP INT TERM
 status=0

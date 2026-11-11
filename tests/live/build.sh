@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Prasyarat: checkout Git bersih pada Linux x86_64, dependency Archiso dan
 # keyring CachyOS siap. Wrapper tidak menaikkan hak akses sendiri:
-# sudo -n bash tests/live/build.sh --output NEW_DIR --packages-dir DIR --calamares-dir DIR
+# sudo -n bash tests/live/build.sh --output NEW_DIR --packages-dir DIR --installer-dir DIR
 # Parent NEW_DIR harus sudah ada; semua artefak dipertahankan, termasuk saat gagal.
 set -euo pipefail
 umask 022
 
 usage() {
-    printf '%s\n' 'Usage: sudo -n bash tests/live/build.sh --output NEW_DIR --packages-dir DIR --calamares-dir DIR'
+    printf '%s\n' 'Usage: sudo -n bash tests/live/build.sh --output NEW_DIR --packages-dir DIR --installer-dir DIR'
 }
 
 die() {
@@ -17,7 +17,7 @@ die() {
 
 output_arg=
 packages_dir=
-calamares_dir=
+installer_dir=
 while (( $# )); do
     case "$1" in
         -h|--help) usage; exit 0 ;;
@@ -26,20 +26,20 @@ while (( $# )); do
             output_arg=$2
             shift 2
             ;;
-        --packages-dir|--calamares-dir)
+        --packages-dir|--installer-dir)
             [[ -n ${2:-} && $2 != -* ]] || die "$1 requires one directory"
             case "$1" in
                 --packages-dir) [[ -z $packages_dir ]] || die 'duplicate --packages-dir'; packages_dir=$2 ;;
-                --calamares-dir) [[ -z $calamares_dir ]] || die 'duplicate --calamares-dir'; calamares_dir=$2 ;;
+                --installer-dir) [[ -z $installer_dir ]] || die 'duplicate --installer-dir'; installer_dir=$2 ;;
             esac
             shift 2
             ;;
         *) usage >&2; die "unknown argument: $1" ;;
     esac
 done
-[[ -n $output_arg && -n $packages_dir && -n $calamares_dir ]] || { usage >&2; exit 1; }
+[[ -n $output_arg && -n $packages_dir && -n $installer_dir ]] || { usage >&2; exit 1; }
 packages_dir=$(cd -- "$packages_dir" && pwd -P)
-calamares_dir=$(cd -- "$calamares_dir" && pwd -P)
+installer_dir=$(cd -- "$installer_dir" && pwd -P)
 [[ $(uname -s) == Linux && $(uname -m) == x86_64 ]] || die 'requires an x86_64 Linux host and native Linux checkout'
 (( EUID == 0 )) || die 'run with sudo -n bash; the wrapper requires root and never invokes sudo itself'
 command -v python3 >/dev/null || die 'install Python 3 on the build host'
@@ -119,8 +119,8 @@ build() {
     pacman -Q > "$output/host-packages.txt"
     cp -- "$packages_dir/SHA256SUMS" "$output/local-packages.sha256"
     cp -- "$packages_dir/SOURCE_SHA256SUMS" "$output/package-sources.sha256"
-    cp -- "$calamares_dir/SHA256SUMS" "$output/installer-packages.sha256"
-    cp -- "$calamares_dir/SOURCE_SHA256SUMS" "$output/installer-sources.sha256"
+    cp -- "$installer_dir/SHA256SUMS" "$output/installer-packages.sha256"
+    cp -- "$installer_dir/SOURCE_SHA256SUMS" "$output/installer-sources.sha256"
     uname -a
     git --version
     bash --version
@@ -139,7 +139,7 @@ build() {
     work_dir=$(mktemp -d -- "$output/work.XXXXXX")
     mkdir -- "$work_dir/staging" "$work_dir/build"
     printf 'Work: %s\n' "$work_dir"
-    bash iso/buildiso.sh --stage-only --packages-dir "$packages_dir" --calamares-dir "$calamares_dir" -w "$work_dir/staging" 2>&1 | tee "$output/staging.log"
+    bash iso/buildiso.sh --stage-only --packages-dir "$packages_dir" --installer-dir "$installer_dir" -w "$work_dir/staging" 2>&1 | tee "$output/staging.log"
     staged_profile=$(python3 - "$repo_dir" "$work_dir/staging" <<'PY'
 from pathlib import Path
 import subprocess
@@ -173,7 +173,7 @@ PY
     )
     printf 'Validated staged profile: %s\n' "$staged_profile" | tee -a "$output/staging.log"
     printf 'Building full ISO from checkout root with verbose Archiso output\n'
-    bash iso/buildiso.sh -v --packages-dir "$packages_dir" --calamares-dir "$calamares_dir" -w "$work_dir/build" -o "$output"
+    bash iso/buildiso.sh -v --packages-dir "$packages_dir" --installer-dir "$installer_dir" -w "$work_dir/build" -o "$output"
 
     local -a isos
     shopt -s nullglob

@@ -1,30 +1,20 @@
 # Build dan uji ConstOS Live
 
-Profil menargetkan **x86_64 UEFI** dengan GRUB dan kernel CachyOS BORE. ISO membuka Calamares di Cage, sedangkan target terpasang memakai Hyprland. Gunakan VM dengan Secure Boot dimatikan. Untuk membuktikan instalasi dan recovery, ikuti [pengujian terpadu](acceptance-guide.md) dan status di roadmap.
+Profil menargetkan **x86_64 UEFI** dengan GRUB dan kernel CachyOS BORE. ISO membuka TUI installer di Foot dan Cage, sedangkan target terpasang memakai Hyprland. Gunakan VM dengan Secure Boot dimatikan. Untuk membuktikan instalasi dan recovery, ikuti [pengujian terpadu](acceptance-guide.md) dan status di roadmap.
 
 ## Siapkan host build
 
 Clone repo di filesystem Linux pada host CachyOS x86_64 agar symlink systemd ikut terpasang. Pasang perkakas dan siapkan kepercayaan paket sebelum build.
 
 ```bash
-sudo pacman -Syu --needed archiso base-devel git python rust cachyos-keyring archlinux-keyring \
-  grub squashfs-tools dosfstools mtools libisoburn boost cmake extra-cmake-modules ninja \
-  qt6-tools ckbcomp kcoreaddons libpwquality libxcrypt polkit-qt6 qt6-base \
-  qt6-declarative qt6-svg qt6-wayland xkeyboard-config yaml-cpp
+sudo pacman -Syu --needed archiso base-devel git python rust go make cachyos-keyring archlinux-keyring \
+  grub squashfs-tools dosfstools mtools libisoburn
 sudo pacman-key --populate archlinux cachyos
 ```
 
 Paket diambil dari repositori CachyOS x86_64 generik dan repositori Arch. Untuk host Arch, siapkan keyring CachyOS melalui [petunjuk upstream](https://github.com/CachyOS/linux-cachyos#installation) sebelum memakai profil ini.
 
-**Temuan ABI pada paket lama:** `cachyos-calamares 3.4.2-4` dan varian `next 3.4.2-13` meminta `libboost_python314.so.1.91.0`, sedangkan repo menyediakan Boost 1.92. Jalur build kini memakai paket lokal hasil rebuild; jangan kembali ke binary lama, membuat symlink ABI, atau downgrade parsial. Build/staging saja tidak membuktikan wizard dapat berjalan: periksa `calamares --version` dalam sesi live sebelum pengujian.
-
-Jalur rebuild ada di `packages/constos-calamares/PKGBUILD`: sumber [CachyOS Calamares `199d715`](https://github.com/CachyOS/cachyos-calamares/tree/199d71543db805fac2cc649ced72ad01dcb2c362), SHA-256 arsip `4670ed9b5fe9e185437fdb0a65638329b8b727973d6f4f7f1992d5bc33a593db`, lisensi GPL-3.0-or-later. Versi CMake sumber ini adalah **3.4.1/API 3.4**, bukan label paket upstream 3.4.2. Gunakan repo generik dengan urutan sama seperti `iso/pacman.conf` pada builder terisolasi; host dengan repo CPU-tier berbeda bukan bukti kecocokan ABI ISO. `makepkg` mengisi dependensi SONAME Boost Python dari hasil link, dan resep membatasi Python 3.14. Rebuild diperlukan ketika ABI berubah. Helper memakai dua proses build secara default; override melalui `CMAKE_BUILD_PARALLEL_LEVEL` sesuai kapasitas VM.
-
-Sejak `3.4.1-2`, paket ini juga mengompilasi modul halaman **Disk** di `packages/constos-calamares/`. Gunakan direktori artefak Calamares baru untuk ISO dengan wizard ini. `SOURCE_SHA256SUMS` mencakup kode modul, CMake, dan resep build. Di guest Diagnostics, periksa `pacman -Ql constos-calamares | grep /constosdisk/` sebelum menguji wizard.
-
-Revisi `3.4.1-3` menambahkan `installer-ui.patch` untuk halaman Welcome, Review, progres JobQueue, dan Finish. Helper memeriksa checksum patch dan modul Disk bersama sumber lainnya. Buat ulang paket Calamares bila mengubah patch atau modul.
-
-Patch `qt-widgets.patch` menambahkan dependensi target Qt Widgets untuk implementasi `show_warning()` pada API Python fork yang dipatok tersebut. Tanpa patch, kompilasi gagal karena `qmessagebox.h` tidak ditemukan. Fingerprint helper mencakup resep dan patch; jangan menerapkan patch hanya pada direktori kerja build.
+Paket installer dibangun dari sumber Go lokal di `installer/tui`. Builder memerlukan Go 1.26.5 atau lebih baru dan akses ke cache atau proxy modul Go. Di mode Diagnostics, periksa `constos-tui --version`.
 
 ## Rakit profil dan ISO
 
@@ -33,33 +23,28 @@ Jalankan dari root repo. Staging dapat diperiksa tanpa hak root.
 ```bash
 # Semua paket dibuat sebagai user biasa sebelum build root.
 packages="$PWD/iso/out/packages-$(date -u +%Y%m%dT%H%M%SZ)"
-calamares="${packages}-calamares"
+installer="${packages}-installer"
 bash packages/build-local.sh "$packages"
-bash packages/build-calamares.sh "$calamares"
-bash iso/buildiso.sh --stage-only --packages-dir "$packages" --calamares-dir "$calamares"
-sudo bash iso/buildiso.sh --packages-dir "$packages" --calamares-dir "$calamares" -v
+bash packages/build-installer.sh "$installer"
+bash iso/buildiso.sh --stage-only --packages-dir "$packages" --installer-dir "$installer"
+sudo bash iso/buildiso.sh --packages-dir "$packages" --installer-dir "$installer" -v
 ```
 
-Staging ISO memanggil `iso/install-boot.sh ROOT live` dan `installer/install.sh ROOT` untuk tema, Calamares, serta sesi Cage yang dipilih SDDM. Paket target `constos-desktop` memanggil `desktop/install.sh ROOT` untuk Hyprland, Welcome, dan Recommended Apps. Dua paket target dan checksum disertakan di `/usr/share/constos/packages`. Paket `constos-calamares` masuk repo lokal khusus mkarchiso. `SHA256SUMS` memeriksa arsip dan `SOURCE_SHA256SUMS` mencocokkan sumber builder dengan checkout. Signature repo jaringan tetap diwajibkan. Setiap run memakai direktori kerja baru di `iso/work/`. `-w DIR`, `-o DIR`, `--packages-dir DIR`, dan `--calamares-dir DIR` mengubah lokasi kerja, output, serta input paket. ISO muncul di `iso/out/constos-*.iso` secara default. Jalankan `makepkg` sebagai pengguna biasa.
+Staging ISO memanggil `iso/install-boot.sh ROOT live` dan `installer/install.sh ROOT` untuk tema, backend installer, serta sesi Cage dan Foot yang dipilih SDDM. Paket target `constos-desktop` memanggil `desktop/install.sh ROOT` untuk Hyprland, Welcome, dan Recommended Apps. Dua paket target dan checksum disertakan di `/usr/share/constos/packages`. Binary TUI dan fingerprint sumber dibangun oleh `packages/build-installer.sh`. Staging memeriksa fingerprint dan memasang binary khusus pada profil live. `SHA256SUMS` memeriksa arsip dan `SOURCE_SHA256SUMS` mencocokkan sumber builder dengan checkout. Signature repo jaringan tetap diwajibkan. Setiap run memakai direktori kerja baru di `iso/work/`. `-w DIR`, `-o DIR`, `--packages-dir DIR`, dan `--installer-dir DIR` mengubah lokasi kerja, output, serta input paket. ISO muncul di `iso/out/constos-*.iso` secara default. Jalankan `makepkg` sebagai pengguna biasa.
 
 `constos-core` mengompilasi CLI `const` untuk x86_64 generik dengan `Cargo.lock`, termasuk saat host memakai flag CPU native. Build memerlukan `cargo`, `rustc`, dan dependensi Cargo yang sudah ada di cache atau dapat diunduh. Fingerprint paket lokal mencakup workspace Rust dan lockfile.
 
-## Ekspor logo
+## Sumber tema dan shell
 
-`assets/const-logo.svg` adalah satu master simbol Const. Sesudah mengubahnya, regenerasikan ekspor menggunakan Python 3 dan `rsvg-convert` dari paket `librsvg`:
+Preset Tsukuyomi memakai dark crimson pada GRUB/Plymouth, Clockwork Orbital, TUI, Dux, dan terminal. `desktop/welcome/qml` mengadaptasi kartu shortcut Ryoku; `guide.py` menyimpan state per akun. Regenerasi ASCII khusus Fastfetch: `python3 assets/export-ascii.py` (Pillow dan rsvg-convert). `yay`, Git, dan base-devel masuk manifest target dari repo bertanda tangan.
 
-```bash
-python3 assets/export-logo.py
-```
+Target mengunduh paket resmi bertanda tangan `extra/dux-shell` saat preflight. Unit pengguna menjalankan `/usr/bin/dms run --session`, dengan preset Const dari paket desktop.
 
-Commit master beserta hasil di `assets/exports/`: PNG RGBA 160×160 untuk GRUB/Plymouth, SVG hitam untuk surface terang, dan SVG badge untuk ikon aplikasi. SDDM memakai master SVG langsung; installer mengambil varian sesuai surface. Jangan mengganti file logo di hasil staging secara manual atau mengedit ekspor sebagai sumber kedua. Periksa [manifest aset](../assets/manifest.json) saat mengubah asal, izin, atau pemakaian.
-
-Build biasa tidak memerlukan renderer karena memakai ekspor yang sudah dikomit. Setelah logo berubah, bangun ulang paket lokal dan ISO: ISO yang sudah dibuat sebelumnya tetap memuat logo lama. Render SVG/staging bukan bukti logo sudah terlihat saat boot.
-
+GRUB, Plymouth, dan Clockwork Orbital SDDM berasal dari Ryoku v1.0.7. Build mengambil sumber dari `iso/grub` dan `desktop/boot`, dengan palet Const dan tampilan tanpa logo. Atribusi ada di [COPYING.txt](../desktop/boot/COPYING.txt).
 
 ## Build tercatat dan smoke Live UEFI
 
-Runner di `tests/live/` menguji ISO tanpa menambah service, SSH, atau konfigurasi khusus tes ke image. Host menjalankan QEMU sebagai user biasa, membuka dua VM tanpa disk terpasang, dan memilih entri GRUB melalui keyboard. Runner membaca layar Calamares pada jalur grafis dan menjalankan probe dari TTY pada jalur Diagnostics. HTTP loopback host menyajikan probe dan menerima hasil melalui jaringan user-mode QEMU, lalu ditutup setelah tes.
+Runner di `tests/live/` menguji ISO tanpa menambah service, SSH, atau konfigurasi khusus tes ke image. Host menjalankan QEMU sebagai user biasa, membuka dua VM tanpa disk terpasang, dan memilih entri GRUB melalui keyboard. Runner membaca layar TUI pada jalur grafis dan menjalankan probe dari TTY pada jalur Diagnostics. HTTP loopback host menyajikan probe dan menerima hasil melalui jaringan user-mode QEMU, lalu ditutup setelah tes.
 
 Tambahkan perkakas pada host Linux yang sudah disiapkan di atas:
 
@@ -77,10 +62,10 @@ Gunakan checkout Git bersih, termasuk tanpa berkas untracked di luar path ignore
 mkdir -p iso/out
 build="$PWD/iso/out/live-$(date -u +%Y%m%dT%H%M%SZ)"
 packages="${build}-packages"
-calamares="${build}-calamares"
+installer="${build}-installer"
 bash packages/build-local.sh "$packages"
-bash packages/build-calamares.sh "$calamares"
-sudo -n bash tests/live/build.sh --output "$build" --packages-dir "$packages" --calamares-dir "$calamares"
+bash packages/build-installer.sh "$installer"
+sudo -n bash tests/live/build.sh --output "$build" --packages-dir "$packages" --installer-dir "$installer"
 iso=$(python3 -c 'import json,pathlib,sys; p=pathlib.Path(sys.argv[1]); print(p/json.loads((p/"build.json").read_text())["iso_filename"])' "$build")
 python3 tests/live/uefi_smoke.py \
   --iso "$iso" --build-evidence "$build/build.json" \
@@ -96,9 +81,9 @@ Path firmware mengikuti [paket Arch edk2-ovmf](https://archlinux.org/packages/ex
 | Jalur | Bukti yang diperiksa |
 | --- | --- |
 | Build Linux | SHA checkout bersih sebelum/sesudah build, checksum paket lokal dan sumbernya, seluruh symlink overlay yang terlacak tetap symlink saat staging, versi paket host, log Archiso, satu ISO beserta SHA-256. |
-| Install ConstOS | VM smoke hanya membawa ISO dan firmware. Timeout GRUB membuka Welcome berbahasa Inggris. `Alt+C` membuka dialog Cancel dan `Alt+Y` kembali ke layar tindakan installer. Periksa screenshot Welcome dan dialog Cancel. |
+| Install Tsukuyomi | VM smoke hanya membawa ISO dan firmware. Timeout GRUB membuka Welcome TUI berbahasa Inggris. Ctrl+C sebelum pemasangan kembali ke layar tindakan installer. Periksa screenshot Welcome dan menu tindakan. |
 | Jaringan/ZRAM | NetworkManager aktif, IPv4 dan lease DHCP pada interface non-loopback, serta perangkat ZRAM aktif sebagai swap dengan algoritme `zstd`. Ini bukan uji internet atau Wi-Fi fisik. |
-| Diagnostics | Cold boot entri terakhir dengan `systemd.unit=multi-user.target`, SDDM tidak aktif, controlling terminal `/dev/tty1`, dan `sudo -n journalctl -b` membaca entri dengan boot ID yang sesuai. Probe juga memeriksa kernel, symlink systemd, paket Cage, sesi installer, dan `calamares --version` dengan Qt offscreen. |
+| Diagnostics | Cold boot entri terakhir dengan `systemd.unit=multi-user.target`, SDDM tidak aktif, controlling terminal `/dev/tty1`, dan `sudo -n journalctl -b` membaca entri dengan boot ID yang sesuai. Probe juga memeriksa kernel, symlink systemd, paket Cage, sesi installer, dan `constos-tui --version`. |
 
 `build.json`, `build.log`, `staging.log`, `host-packages.txt`, checksum, dan ISO berada di direktori build. Direktori smoke menyimpan `summary.json`, report konsol, perintah/versi QEMU, hash firmware dan runner/probe, screenshot GRUB/dialog installer/layar tindakan/TTY, serta log kegagalan. Exit nonzero atau `ok: false` memblokir penerimaan. Pilih direktori baru untuk setiap percobaan.
 
@@ -114,7 +99,7 @@ Isi repository variables `CONSTOS_OVMF_CODE` dan `CONSTOS_OVMF_VARS` dengan path
 
 ## Pemeriksaan manual tambahan
 
-Untuk diagnosis interaktif, boot **ConstOS Diagnostics** dengan profil VM yang sama. Periksa `uname -r`, `systemctl --failed`, `nmcli general status`, `zramctl`, serta `journalctl -b`. Jalankan skenario shortcut, audio, file/MIME, lock/logout, screenshot, dan portal pada desktop yang sudah terpasang.
+Untuk diagnosis interaktif, boot **Tsukuyomi Diagnostics** dengan profil VM yang sama. Periksa `uname -r`, `systemctl --failed`, `nmcli general status`, `zramctl`, serta `journalctl -b`. Jalankan skenario shortcut, audio, file/MIME, lock/logout, screenshot, dan portal pada desktop yang sudah terpasang.
 
 Regresi batas disk, arsip preflight, dan backend katalog dapat dijalankan sebagai pengguna biasa tanpa disk uji.
 

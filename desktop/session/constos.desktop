@@ -1,7 +1,7 @@
 [Desktop Entry]
-Name=ConstOS
-Comment=ConstOS desktop with Hyprland
+Name=Tsukuyomi
+Comment=Tsukuyomi desktop with Hyprland
 Exec=/usr/bin/constos-session
-TryExec=/usr/bin/Hyprland
+TryExec=/usr/bin/start-hyprland
 Type=Application
 DesktopNames=Hyprland

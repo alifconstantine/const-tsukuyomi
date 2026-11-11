@@ -9,12 +9,12 @@ Dokumen ini menjelaskan batas komponen dan arah desain. Status serta bukti pener
 | Area | Implementasi saat ini | Target dan batas |
 | --- | --- | --- |
 | Build dan boot | Profil Archiso di `iso/`, kernel CachyOS BORE, tema GRUB/Plymouth/SDDM, dan `iso/install-boot.sh`. Roadmap mencatat bukti build baseline serta verifikasi integrasi terbaru. | CI Linux, pembuktian seluruh skenario Boot UI di VM baru, dan bukti perangkat fisik. BIOS, Secure Boot, dan varian kernel/CPU bukan dukungan implisit. |
-| Sesi grafis | ISO men-stage sesi khusus Calamares di Cage. Pada target, `desktop/install.sh` memasang `constos.desktop` → `constos-session`, Lua Hyprland, layanan user, portal, dan asosiasi MIME. | Kiosk installer perlu dibuktikan pada ISO baru. Shell/Settings Quickshell/QML masih perlu spike fokus, multi-monitor, aksesibilitas, dan performa. |
-| Screenshot dan media | `constos-screenshot` dipakai oleh Print, Alt+Print, launcher, dan Waybar; seleksi dibatalkan tanpa menimpa clipboard. | Pembuktian pada sesi live/installed penuh, lalu UI screenshot, editor anotasi, recorder video, dan recorder audio di fase 07A. |
-| Sistem dan storage | Konfigurasi ZRAM/sysctl, paket `constos-core`/`constos-desktop`, serta launcher/backend Calamares untuk disk UEFI kosong. Baseline VM sebelumnya membuktikan Btrfs, reboot tanpa ISO, dan login SDDM. | Ulangi jalur utama pada build terbaru sesuai [spesifikasi installer](installer-plan.md). Uji recovery/rollback Snapper dari bootloader dan verifikasi perangkat fisik sebelum ConstOS 1.0. |
+| Sesi grafis | ISO men-stage TUI installer di Foot dan Cage. Pada target, `desktop/install.sh` memasang `constos.desktop` → `constos-session`, Lua Hyprland, layanan user, portal, dan asosiasi MIME. | Kiosk installer perlu dibuktikan pada ISO baru. Paket target menyediakan Dux Shell dengan preset Const. Uji fokus, multi-monitor, aksesibilitas, dan performa mengikuti gerbang desktop. |
+| Screenshot dan media | `constos-screenshot` dipakai oleh Print, Alt+Print, dan launcher; seleksi dibatalkan tanpa menimpa clipboard. | Pembuktian pada sesi live/installed penuh, lalu UI screenshot, editor anotasi, recorder video, dan recorder audio di fase 07A. |
+| Sistem dan storage | Konfigurasi ZRAM/sysctl, paket `constos-core`/`constos-desktop`, serta TUI dan backend Python untuk disk UEFI kosong. Baseline VM sebelumnya membuktikan Btrfs, reboot tanpa ISO, dan login SDDM. | Ulangi jalur utama pada build terbaru sesuai [spesifikasi installer](installer-plan.md). Uji recovery/rollback Snapper dari bootloader dan verifikasi perangkat fisik sebelum ConstOS 1.0. |
 | Telemetri | CLI Rust `const` dari `constos-core` membaca data sistem pada target terpasang. Profil live masih memuat prototipe Python `constd` HTTP GET/JSON. | Satu collector Rust bersama dan IPC sesi bertipe. HTTP lama dihapus ketika konsumen sudah bermigrasi. |
 | Harness dan sandbox | Resep paket Harness dan wrapper Bubblewrap tersedia. | Paket Linux lengkap, helper computer use sesi pengguna, izin per capability, dan sandbox teruji. Keberadaan wrapper bukan bukti seluruh workspace/desktop sudah terisolasi. |
-| Aset | Master simbol Const di `assets/const-logo.svg`, ekspor boot/ikon di `assets/exports/`, serta manifest logo tersedia. Tema berada di `desktop/`. | Audit hak logo, aset lain, dan penerimaan boot baru masih diperlukan; pemilihan logo bukan bukti lisensi redistribusi. |
+| Aset | Master simbol Const dan ekspor historis ada di `assets/`. Boot dan greeter memakai teks, progres, dan bentuk QML. Tema berada di `desktop/`. | Audit hak logo, aset lain, dan penerimaan boot baru masih diperlukan; pemilihan logo bukan bukti lisensi redistribusi. |
 
 ## Alur target
 
@@ -23,7 +23,7 @@ Diagram ini adalah desain target, bukan inventaris layanan yang sudah berjalan.
 ```mermaid
 flowchart TD
     BUILD["Archiso dan paket ConstOS"] --> LIVE["Profil live"]
-    LIVE --> KIOSK["Sesi installer Cage dan Calamares"]
+    LIVE --> KIOSK["TUI installer di Cage dan Foot"]
     LIVE --> DIAG["Konsol Diagnostics"]
     KIOSK --> INSTALL["Preflight, instalasi, dan Finish"]
     INSTALL --> LOGIN["Boot dari disk dan autentikasi SDDM"]
@@ -46,9 +46,9 @@ flowchart TD
 | Lokasi | Pemilik tanggung jawab |
 | --- | --- |
 | `iso/` | Profil Archiso, manifest live, GRUB, helper `install-boot.sh`, overlay, staging, dan pemanggilan `mkarchiso`. Artefak kerja/output bukan sumber konfigurasi. |
-| `installer/` | Launcher, konfigurasi Calamares, modul job Python, manifest target, dan backend pemasangan UEFI disk kosong. |
+| `installer/` | Sumber TUI Ryoku yang diadaptasi, konfigurasi, manifest target, dan backend Python untuk disk UEFI kosong. |
 | `desktop/` | Sumber sesi, keybind, tema boot/fallback, unit user, helper screenshot/lock, portal, dan MIME. Hanya file yang dipasang `desktop/install.sh` atau `iso/install-boot.sh` boleh disebut efektif. |
-| `packages/` | Builder dan resep `constos-core`/`constos-desktop`, `constos-calamares` khusus live, serta resep Harness. Paket Harness belum menyertakan binary upstream. |
+| `packages/` | Builder dan resep `constos-core`/`constos-desktop`, builder binary `constos-tui` khusus live, serta resep Harness. Paket Harness belum menyertakan binary upstream. |
 | `daemons/` | Prototipe daemon saat ini. Jangan menambah salinan collector baru untuk setiap UI. |
 | `assets/` | Aset visual sumber/ekspor yang dipakai, dengan provenance dan lisensi yang perlu dicatat. |
 | `docs/` | Arsitektur dan panduan teknis; tidak menyalin backlog atau menyimpan bukti media mentah. |
@@ -58,7 +58,7 @@ flowchart TD
 
 `iso/buildiso.sh` menjalankan `installer/install.sh` untuk sesi live. Paket `constos-desktop` menjalankan `desktop/install.sh` untuk sesi Hyprland, Welcome, dan entri launcher pada target. Keduanya memakai `iso/install-boot.sh` untuk tema boot/greeter bersama dan konfigurasi spesifik masing-masing. Entry Hyprland efektif berada di `desktop/hypr/hyprland.lua`.
 
-`packages/build-calamares.sh` membangun sumber Calamares yang dipatok commit dan checksum terhadap repo generik yang sama dengan ISO. Resep menyertakan dependensi SONAME Boost Python dan batas versi Python agar pergantian ABI tidak diterima diam-diam. `iso/buildiso.sh --calamares-dir DIR` memeriksa checksum arsip/sumber, lalu membuat repo lokal hanya pada konfigurasi build mkarchiso. Config pacman live disalin sebelum repo tersebut ditambahkan; config target berasal dari `installer/pacman.conf`. Installer Calamares dan repo build tidak ikut ke target terpasang.
+`packages/build-installer.sh` mengompilasi TUI Go. `iso/buildiso.sh --installer-dir DIR` memeriksa checksum binary dan fingerprint sumber, lalu memasang TUI pada overlay live. Config pacman target berasal dari `installer/pacman.conf`. Binary TUI dan konfigurasi sudo live terpisah dari paket target.
 
 ## Batas proses dan kepercayaan
 
@@ -90,17 +90,20 @@ Untuk Android, pilihan pada installer menyiapkan paket dan image Waydroid. Unit 
 
 ### Installer otomatis dan pengenalan desktop
 
-Entri GRUB **Install ConstOS** memulai jalur grafis ISO. SDDM memakai autologin live untuk menjalankan `constos-installer.desktop` sebagai `liveuser`. Cage membuka `kiosk` pada satu output dengan renderer perangkat lunak. Kiosk membuka wizard Calamares dan menampilkan pilihan buka ulang, reboot, atau matikan ketika launcher keluar. Entri **ConstOS Diagnostics** memakai `multi-user.target` dan membuka TTY.
+Entri GRUB **Install Tsukuyomi** memulai SDDM dengan autologin khusus `liveuser`. Sesi menjalankan Cage pada satu output dan membuka TUI di Foot. Jika layout keyboard berubah, sesi membuka ulang Cage dengan layout baru sebelum pengisian akun. Saat TUI keluar, kiosk menawarkan buka ulang, reboot, atau matikan. Entri **Tsukuyomi Diagnostics** memakai `multi-user.target` dan membuka TTY.
 
-Backend root menyimpan snapshot identitas disk di direktori runtime privat. Welcome tetap terbuka jika snapshot kosong. Modul `constosdisk` menampilkan daftar kandidat dan memperbarui snapshot lewat **Check again**, yang sekaligus menghapus pilihan lama. GlobalStorage membawa identitas kandidat sebagai JSON, termasuk `diskseq` dari kernel untuk membedakan perangkat pengganti yang memakai path yang sama. **Review** merangkum pilihan. Setelah **Install ConstOS**, preflight mencocokkan identitas dengan snapshot dan membaca ulang disk. Job unduhan menyelesaikan transaksi arsip bertanda tangan sebelum job storage memeriksa kembali identitas dan kelayakan tepat sebelum partisi. Welcome memeriksa RAM dan hak eksekusi. Locale antarmuka awal Inggris dan konfigurasi locale target memakai modul Location.
+Backend mengembalikan daftar disk layak melalui `--list-disks`. Setelah Review, TUI mengirim satu dokumen JSON melalui stdin ke backend yang berjalan lewat sudo. Payload berisi identitas disk yang dipilih, ID browser, konfigurasi wilayah dan akun, serta hash kata sandi SHA-512 crypt. Backend membaca ulang disk dan memvalidasi pilihan sebelum unduhan, lalu memeriksa ulang disk serta arsip sebelum partisi. Backend mengeluarkan event `@@CONST_STEP` untuk progres. TUI hanya menampilkan layar selesai sesudah proses keluar sukses dan unmount selesai.
 
-UI menampilkan status dari event JobQueue, serta log Calamares di **Installation details**. Job unmount wajib menemukan target yang masih terpasang dan melepasnya sebelum **Installation complete**. Jika job gagal, Calamares menampilkan error dan kiosk menawarkan buka ulang setelah dialog ditutup. Pada jalur sukses, **Restart** memberi instruksi memilih disk terpasang. SDDM di target mengautentikasi akun baru sebelum `constos-session` dimulai. Pilihan browser dan pengelolaan NetworkManager di wizard mengikuti [spesifikasi installer](installer-plan.md).
+Akun target dibuat dengan Fish dan akses sudo melalui grup wheel, sementara root dikunci. SDDM di target memakai Clockwork Orbital untuk autentikasi sebelum Hyprland dimulai. Halaman Network memakai NetworkManager dan halaman Browser menentukan paket serta handler target. [Spesifikasi installer](installer-plan.md)
 
-Paket `constos-desktop` memiliki satu aplikasi GTK untuk **Welcome** dan **Recommended Apps**. Service sesi meminta tampilan Welcome pada login pertama. Aplikasi menyimpan pengabaian per akun di `$XDG_STATE_HOME/constos/welcome-seen`, dengan fallback `~/.local/state`. Startup sesi mengimpor direktori XDG yang dipakai sehingga service dan launcher membaca data pengguna yang sama. Membuka tampilan melalui launcher melewati pemeriksaan penanda. Kedua tampilan berbagi instance aplikasi yang sama.
+Paket `constos-desktop` memasang panduan shortcut Quickshell/QML yang mengadaptasi `PageEssentials`, `ActionKey`, `PageTitle`, dan `Keycap` Ryoku. `guide.py` mengawasi proses, mengunci satu instance per akun, dan menyimpan `$XDG_STATE_HOME/constos/welcome-seen` hanya setelah penutupan normal. Service sesi memeriksa penanda pada login pertama; launcher bisa membuka ulang. Panduan tidak memuat gambar dan tidak memerlukan daemon, Hub, atau Store Ryoku. Recommended Apps tetap menjadi aplikasi GTK terpisah dengan katalog Flatpak yang sama.
 
+SDDM memanggil `constos-session` → `start-hyprland --` → Hyprland. Watchdog resmi memiliki proses compositor; wrapper tetap memiliki lock dan cleanup layanan sesi setelah watchdog berhenti. Dux Shell resmi menjalankan bar, launcher, Settings, lock, dan notifikasi; preset vendor Tsukuyomi tidak mengganti kode paket Dux. Fastfetch membaca turunan ASCII Const dari `/usr/share/constos/desktop/const.txt` khusus terminal.
+
+Konfigurasi target GRUB memakai `GRUB_DISABLE_BOOTNEXT=true` untuk meniadakan daftar perangkat EFI tambahan. Generator kernel, submenu advanced/recovery, dan pengaturan firmware tetap berjalan. Installer menampilkan sebab kegagalan, tahap, dan path log privat. Retry otomatis hanya tersedia sebelum event storage; disk yang sudah memasuki storage harus diperiksa terlebih dahulu.
 Katalog memakai ID aplikasi tetap. Tombol **Install** menyiapkan remote dari descriptor Flathub yang disertakan paket Flatpak bila belum ada, lalu memasang ref untuk pengguna aktif. Remote dengan URL berbeda, dinonaktifkan, atau tanpa verifikasi GPG ditolak. UI menampilkan sukses setelah Flatpak mengonfirmasi ref. Inventaris saat ini masih membaca ID lintas scope dan perlu diselaraskan dengan aksi.
 
-**Const Store** dirancang sebagai pemilik discovery, Library, dan transaksi aplikasi pilihan dari Flathub. Welcome menautkan rekomendasi ke katalog yang sama. Backend membawa scope, origin, dan ref saat membaca dan mengubah status, lalu memuat ulang state setelah hasil transaksi. Pembaruan OS dan paket vendor tetap melalui pacman. Const Hub mengatur preferensi aplikasi dan desktop.
+**Const Store** dirancang sebagai pemilik discovery, Library, dan transaksi aplikasi pilihan dari Flathub. Recommended Apps memakai katalog yang sama. Backend membawa scope, origin, dan ref saat membaca dan mengubah status, lalu memuat ulang state setelah hasil transaksi. Pembaruan OS dan paket vendor tetap melalui pacman. Const Hub mengatur preferensi aplikasi dan desktop.
 
 ### Harness dan computer use
 
@@ -124,16 +127,18 @@ Ekstraksi wallpaper berjalan lokal sebagai user biasa; kegagalan mempertahankan 
 
 Widget bawaan memiliki ID jenis/instance, schema preferensi, sumber data, aksi terbatas, dan lifecycle. Layout per-user dimigrasikan ketika upgrade atau output berubah. Plugin pihak ketiga tidak termasuk dukungan 1.0 sebelum model izin/kompatibilitas/isolasinya ditetapkan. Aksesibilitas QML, fokus, dan keyboard diuji sebelum toolkit dikunci.
 
-Foot menjadi terminal awal. Hub dirancang menulis override tampilan Foot per pengguna dengan pemisahan dari default paket dan konfigurasi login shell. Saat beralih dari konfigurasi `/etc/skel` yang sudah tersalin, migrasi perlu mempertahankan edit pengguna dan membuat cadangan sebelum mengganti bagian yang dikelola.
+Kitty memakai Fish sebagai login shell akun baru. Fastfetch membaca simbol Const ASCII dari paket desktop. Pengaturan pengguna berada di XDG config; default di `/etc/skel` berlaku saat akun dibuat.
 
-Aset dipasang oleh paket yang memakainya. `assets/manifest.json` mencatat asal logo, master, ekspor, penggunaan, paket pemilik, serta audit izin yang belum selesai. `constos-desktop` memasang SVG branding dan ikon `constos` hicolor melalui `iso/install-boot.sh`; GRUB/Plymouth menerima ekspor PNG yang sama, SDDM memakai SVG. Staging installer mengambil simbol putih/hitam dan ikon dari sumber yang sama. `packages/build-local.sh` menyertakan `assets/` pada fingerprint sumber agar artefak branding lama ditolak. Build menggunakan ekspor yang dikomit dan tidak memanggil renderer atau layanan generasi gambar. Preferensi tema/wallpaper pengguna terpisah dari default vendor; cakupan aset lain tetap mengikuti fase 06 roadmap.
+`constos-shell.service` menjalankan Dux untuk bar, launcher, notifikasi, lock, idle, wallpaper, dan polkit sesi. Dux membaca preset Const dari konfigurasi akun dan palet vendor dari `/usr/share/constos/desktop`. Shell memakai UI bawaan paket resmi `extra/dux-shell` melalui `dms run --session`. Saat membuat akun pertama, installer mengisi penanda seri rilis Dux di `/etc/skel` agar layar pembuka desktop memakai panduan shortcut Tsukuyomi. Wofi dipanggil sebagai cadangan saat perintah launcher Dux gagal.
+
+`assets/manifest.json` mencatat asal dan pemakaian aset. Tema GRUB, Plymouth, dan QML Clockwork Orbital memakai kode Ryoku dengan palet Const. Tema bawaan memakai teks dan elemen fungsional tanpa logo.
 
 ## Konfigurasi, state, dan lifecycle sesi
 
 - Paket memiliki default vendor; preferensi pengguna mengikuti XDG config, data persisten mengikuti XDG data, state mengikuti XDG state, dan resource sementara mengikuti runtime directory sesi. Path serta schema konkret ditetapkan bersama implementasinya.
 - Tulis preferensi secara atomik, versikan schema, dan migrasikan tanpa menimpa pilihan pengguna. Seeder hanya membuat konfigurasi awal yang belum ada.
 - Sesi grafis diluncurkan melalui `constos-session`, lalu `constos-session-start` mengimpor `WAYLAND_DISPLAY` aktual dan mengaktifkan `constos-session.target`. Saat logout, layanan desktop dan portal dihentikan serta environment Wayland dibersihkan agar login berikutnya tidak menggandakan panel, applet, atau daemon notifikasi.
-- Installer hanya berjalan dari ISO live UEFI dan memeriksa executable Calamares sebelum pemilihan disk. Data override Calamares mencakup settings, modules, branding, dan tautan QML bawaan pada direktori yang sama. Preflight memeriksa waktu/keyring lalu mengunduh transaksi bertanda tangan dan menyimpan daftar arsip beserta hash sebelum partisi. Storage memeriksa ulang identitas disk serta hash arsip; bootstrap memakai `pacstrap -U` dari arsip tepat tersebut, tanpa sinkronisasi repo ulang. Target dibangun dari transaksi itu dan paket lokal ber-checksum, bukan overlay live. Symlink `os-release` upstream yang dikenal dan belum dimiliki paket dilepas sebelum pemasangan core, lalu identitas target divalidasi.
+- Backend installer hanya berjalan dari ISO live UEFI. Preflight memeriksa waktu/keyring lalu mengunduh transaksi bertanda tangan dan menyimpan daftar arsip beserta hash sebelum partisi. Storage memeriksa ulang identitas disk serta hash arsip; bootstrap memakai `pacstrap -U` dari arsip tepat tersebut, tanpa sinkronisasi repo ulang. Target dibangun dari transaksi itu dan paket lokal ber-checksum, bukan overlay live. Symlink `os-release` upstream yang dikenal dan belum dimiliki paket dilepas sebelum pemasangan core, lalu identitas target divalidasi.
 - Gunakan direktori media XDG untuk hasil capture sesuai pilihan pengguna. Jangan menyimpan rekaman atau rahasia di direktori runtime yang bisa hilang saat logout.
 - Satu pemilik per service sesi, notification bus name, dan reservasi tepi layar. Jangan menjalankan dua panel/daemon setelah login ulang atau selama cutover.
 - Impor environment dari sesi aktif; jangan hardcode nama display Wayland. Lock/logout harus memberi jalur penghentian akses capture dan computer use yang dapat diuji.

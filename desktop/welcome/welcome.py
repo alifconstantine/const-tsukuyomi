@@ -5,7 +5,7 @@ from threading import Thread
 
 import gi
 
-from catalog import APPS, dismiss_welcome, install_app, installed_apps, welcome_marker
+from catalog import APPS, install_app, installed_apps
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gio, GLib, Gtk
@@ -31,46 +31,33 @@ class Welcome(Gtk.Application):
             flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE,
         )
         self.add_main_option(
-            "first-login", 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE, "Open on first login", None,
-        )
-        self.add_main_option(
             "apps", 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE, "Open Recommended Apps", None,
         )
-        self.marker = welcome_marker()
         self.window = None
         self.busy = False
-        self.welcome_opened = False
         self.installed = None
         self.install_buttons = {}
 
     def do_command_line(self, command_line):
         options = command_line.get_options_dict()
-        first_login = options.contains("first-login")
-        apps = options.contains("apps")
-        if len(command_line.get_arguments()) != 1 or (first_login and apps):
+        if len(command_line.get_arguments()) != 1:
             return 2
-        if first_login and (self.marker.is_file() or self.window is not None):
-            return 0
         if self.window is None:
             self.build_window()
         if not self.busy:
-            if apps:
-                self.show_apps()
-            else:
-                self.show_welcome()
+            self.show_apps()
         self.window.present()
         return 0
 
     def build_window(self):
         self.window = Gtk.ApplicationWindow(
-            application=self, title="Welcome · ConstOS", default_width=560, default_height=460,
+            application=self, title="Recommended Apps · Tsukuyomi", default_width=560, default_height=460,
         )
         self.window.connect("close-request", self.close_requested)
         scroll = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER)
         self.window.set_child(scroll)
         self.stack = Gtk.Stack()
         scroll.set_child(self.stack)
-        self.stack.add_named(self.welcome_page(), "welcome")
         self.stack.add_named(self.apps_page(), "apps")
 
     def page(self, title, subtitle):
@@ -79,26 +66,6 @@ class Welcome(Gtk.Application):
             page.set_property(f"margin-{edge}", 24)
         page.append(text_label(title, "title-1"))
         page.append(text_label(subtitle))
-        return page
-
-    def welcome_page(self):
-        page = self.page("Welcome to ConstOS", "Get started with three desktop shortcuts.")
-        for shortcut, purpose in (
-            ("Super + Space", "Open the app launcher"),
-            ("Super + E", "Open the Thunar file manager"),
-            ("Super + Enter", "Open the Foot terminal"),
-        ):
-            page.append(text_label(f"{shortcut}  ·  {purpose}"))
-        page.append(text_label("Super is usually the key with the Windows logo."))
-        page.append(button("Recommended Apps", self.show_apps))
-        self.welcome_status = text_label("")
-        page.append(self.welcome_status)
-        actions = Gtk.Box(spacing=8, halign=Gtk.Align.END)
-        actions.append(button("Skip", self.finish_welcome))
-        done = button("Done", self.finish_welcome)
-        done.add_css_class("suggested-action")
-        actions.append(done)
-        page.append(actions)
         return page
 
     def apps_page(self):
@@ -126,41 +93,22 @@ class Welcome(Gtk.Application):
         status.append(self.apps_status)
         page.append(status)
         actions = Gtk.Box(spacing=8)
-        self.back = button("Back to Welcome", self.show_welcome)
+        self.back = button("Shortcut guide", lambda *_: subprocess.Popen(["/usr/lib/constos/welcome/guide.py"]))
         self.refresh = button("Refresh", self.refresh_apps)
         actions.append(self.back)
         actions.append(self.refresh)
         page.append(actions)
         return page
 
-    def show_welcome(self, *_):
-        self.welcome_opened = True
-        self.window.set_title("Welcome · ConstOS")
-        self.stack.set_visible_child_name("welcome")
-
     def show_apps(self, *_):
-        self.window.set_title("Recommended Apps · ConstOS")
+        self.window.set_title("Recommended Apps · Tsukuyomi")
         self.stack.set_visible_child_name("apps")
         self.refresh_apps()
 
-    def save_dismissal(self):
-        if self.welcome_opened:
-            try:
-                dismiss_welcome(self.marker)
-            except OSError:
-                self.show_welcome()
-                self.welcome_status.set_label("Could not save Welcome preferences. Check permissions for your user state directory.")
-                return False
-        return True
-
-    def finish_welcome(self, *_):
-        self.window.close()
-
     def close_requested(self, *_):
-        if self.busy or not self.save_dismissal():
+        if self.busy:
             return True
         self.window = None
-        self.welcome_opened = False
         self.installed = None
         return False
 

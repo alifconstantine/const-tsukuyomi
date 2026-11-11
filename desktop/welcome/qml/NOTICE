@@ -1,0 +1,6 @@
+PageEssentials.qml, PageTitle.qml, ActionKey.qml, and Keycap.qml derive from
+Ryoku v1.0.7, commit f7197d72de8a21e44b0bea922bdd915f28f6b327 (GPL-3.0).
+Source: https://github.com/Ryoku-dev/ryoku
+Original paths: ryoku/shell/quickshell/welcome/ and ryoku/ui/Keycap.qml.
+Adapted for Tsukuyomi: local tokens, actual Hyprland/Dux shortcuts, keyboard
+activation, responsive layout. No Ryoku images, logo, services or store included.

@@ -221,7 +221,8 @@ def read_screen(args, vm, name):
 def select_grub(args, vm, mode, deadline):
     while time.monotonic() < deadline:
         text = read_screen(args, vm, "boot")
-        if "install constos" in text and "console fallback" in text:
+        # Recognise the two public entries before allowing the default timeout.
+        if re.search(r"\binstall tsukuyomi\b", text) and "tsukuyomi diagnostics (console fallback)" in text:
             if mode != "installer":
                 vm.key("up")
             vm.screenshot("grub")
@@ -278,18 +279,14 @@ def run_boot(args, server, mode):
         if mode == "installer":
             welcome = wait_installer_screen(
                 args, vm, "installer-welcome",
-                ("welcome to the constos", "32 gib", "review your choices"), deadline,
+                ("welcome to the tsukuyomi installer", "empty fixed disk", "confirm the installation"), deadline,
             )
-            vm.key("alt", "c")
-            cancel = wait_installer_screen(
-                args, vm, "installer-cancel", ("cancel installation", "installer will quit"), deadline,
-            )
-            vm.key("alt", "y")
+            vm.key("ctrl", "c")
             actions = wait_installer_screen(
                 args, vm, "installer-actions", ("choose an action", "restart", "shut down"), deadline,
             )
             return {"ok": True, "elapsed_seconds": round(time.monotonic() - started, 2),
-                    "evidence": [str(welcome), str(cancel), str(actions)]}
+                    "evidence": [str(welcome), str(actions)]}
         command = f"curl -fsS {server.guest_url}/{mode}.py | python\n"
         # Readiness is proven by a report from the real terminal, not by a fixed boot sleep.
         while time.monotonic() < deadline:

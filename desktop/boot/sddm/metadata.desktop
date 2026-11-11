@@ -1,7 +1,8 @@
 [SddmGreeterTheme]
-Name=ConstOS
-Description=ConstOS black, white, and blue greeter
-Author=ConstOS Project
+Name=Tsukuyomi
+Description=ConstOS dark crimson greeter
+Author=Darkkal44 and Ryoku contributors
+ConfigFile=theme.conf
 Type=sddm-theme
 Version=1.0
 Website=https://github.com/alifconstantine/const-tsukuyomi

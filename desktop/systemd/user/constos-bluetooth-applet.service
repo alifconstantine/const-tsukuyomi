@@ -1,8 +1,0 @@
-[Unit]
-Description=ConstOS bluetooth-applet
-PartOf=constos-session.target
-
-[Service]
-ExecStart=/usr/bin/blueman-applet
-Restart=on-failure
-RestartSec=2

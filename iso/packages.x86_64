@@ -55,6 +55,7 @@ qt6-wayland
 
 # --- Networking ---
 networkmanager
+nm-connection-editor
 wireless_tools
 wpa_supplicant
 bluez
@@ -81,7 +82,7 @@ xorg-xauth
 plymouth
 
 # --- Installer khusus live; target tidak menyalin overlay ISO ---
-constos-calamares
+foot
 zenity
 
 # --- ConstOS Core Packages ---

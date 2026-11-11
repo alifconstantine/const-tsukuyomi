@@ -25,7 +25,7 @@ jobs:
 
       # Runner harus sudah CachyOS x86_64 dengan keyring terinisialisasi,
       # dependency Archiso, QEMU dengan virtio-vga, OVMF, tesseract (eng), Python 3, dan sudo -n.
-      # Toolchain Rust dan dependency build Calamares juga harus tersedia.
+      # Toolchain Go dan Rust juga harus tersedia.
       - name: Periksa host dan siapkan direktori bukti baru
         id: paths
         shell: bash
@@ -51,7 +51,7 @@ jobs:
             echo 'Firmware OVMF_CODE/OVMF_VARS harus file yang dapat dibaca user runner.' >&2
             exit 1
           }
-          for tool in sudo python3 qemu-system-x86_64 tesseract mkarchiso pacman git makepkg repo-add cmake ninja cargo rustc; do
+          for tool in go sudo python3 qemu-system-x86_64 tesseract mkarchiso pacman git makepkg cargo rustc; do
             command -v "$tool" >/dev/null || {
               printf 'Tool runner belum tersedia: %s\n' "$tool" >&2
               exit 1
@@ -70,6 +70,7 @@ jobs:
           python3 -m unittest discover -s tests/installer -p 'test_*.py'
           python3 -m unittest discover -s tests/desktop -p 'test_*.py'
           cargo test --workspace --locked
+          (cd installer/tui && go test ./...)
 
       - name: Bangun paket lokal sebagai user runner
         shell: bash
@@ -78,7 +79,7 @@ jobs:
         run: |
           set -euo pipefail
           bash packages/build-local.sh "$EVIDENCE_ROOT/packages"
-          bash packages/build-calamares.sh "$EVIDENCE_ROOT/calamares"
+          bash packages/build-installer.sh "$EVIDENCE_ROOT/installer"
 
       - name: Build ISO dan simpan identitas checkout serta checksum
         shell: bash
@@ -88,7 +89,7 @@ jobs:
           set -euo pipefail
           sudo -n bash tests/live/build.sh --output "$BUILD_DIR" \
             --packages-dir "$(dirname -- "$BUILD_DIR")/packages" \
-            --calamares-dir "$(dirname -- "$BUILD_DIR")/calamares"
+            --installer-dir "$(dirname -- "$BUILD_DIR")/installer"
 
       - name: Cold boot installer dan console sebagai user biasa
         shell: bash

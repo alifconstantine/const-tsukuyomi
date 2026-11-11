@@ -6,12 +6,14 @@ import json
 import os
 from pathlib import Path
 import platform
+import pwd
 import re
 import shutil
 import stat
 import subprocess
 import sys
 import tempfile
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 DATA = Path('/usr/share/constos/installer')
 WORK = Path('/run/constos-installer')
@@ -40,6 +42,9 @@ def require_live():
         raise RuntimeError('The installer can only run from the Archiso live image.')
     if not Path('/sys/firmware/efi/efivars').is_dir():
         raise RuntimeError('Restart the ISO in UEFI mode to install ConstOS.')
+    for variable in Path('/sys/firmware/efi/efivars').glob('SecureBoot-*'):
+        if variable.read_bytes()[-1:] == b'\x01':
+            raise RuntimeError('Disable Secure Boot before installing ConstOS.')
     if 'ro' in capture(['findmnt', '-no', 'OPTIONS', '/sys/firmware/efi/efivars']).split(','):
         raise RuntimeError('EFI variables must be writable to register GRUB.')
 
@@ -110,16 +115,44 @@ def recheck_disk(expected):
         raise RuntimeError('The selected disk changed. Open the installer and select the disk again.')
 
 
+def browser_choice(choice):
+    config = json.loads((DATA / 'browsers.json').read_text())
+    for item in config['items']:
+        if item['id'] == choice:
+            return item
+    raise RuntimeError('Choose a browser or No browser and review the installation plan.')
+
+
+def selected_browser():
+    return browser_choice((WORK / 'browser').read_text())
+
+
+def configure_browser(root):
+    desktop = selected_browser()['desktop']
+    if not desktop:
+        return
+    if not (root / 'usr/share/applications' / desktop).is_file():
+        raise RuntimeError('The selected browser desktop entry was not installed.')
+    mimeapps = root / 'etc/skel/.config/mimeapps.list'
+    entries = ''.join(f'{kind}={desktop};\n' for kind in
+                      ('x-scheme-handler/http', 'x-scheme-handler/https', 'text/html'))
+    mimeapps.write_text(mimeapps.read_text().replace('[Default Applications]\n',
+                                                    '[Default Applications]\n' + entries, 1))
+
+
 def packages():
     result = []
     for line in (DATA / 'target-packages.x86_64').read_text().splitlines():
         item = line.partition('#')[0].strip()
         if item:
-            if not re.fullmatch(r'[a-z0-9@+_.-]+', item):
+            if not re.fullmatch(r'(?:extra/)?[a-z0-9@+_.-]+', item):
                 raise RuntimeError('Invalid target package manifest.')
             result.append(item)
     if not result:
         raise RuntimeError('The target package manifest is empty.')
+    browser = selected_browser()['package']
+    if browser:
+        result.append(browser)
     return result
 
 
@@ -161,9 +194,10 @@ def transaction_packages():
     return result
 
 
-def preflight(selection):
+def preflight(selection, browser):
     require_live()
     confirm_disk(selection)
+    (WORK / 'browser').write_text(browser_choice(browser)['id'])
     for binary in ('pacstrap', 'arch-chroot', 'genfstab', 'sfdisk', 'udevadm',
                    'mkfs.fat', 'mkfs.btrfs', 'btrfs', 'mount', 'umount', 'pacman', 'pacman-key'):
         if not shutil.which(binary):
@@ -194,7 +228,7 @@ def download():
         raise RuntimeError(
             'Could not download or verify the installation packages. Check the network and the package log, '
             'then reopen the installer. No changes were made to the disk.\n'
-            'Logs: /run/constos-installer/pacman.log and /run/constos-installer/calamares.log'
+            'Package log: /run/constos-installer/pacman.log'
         ) from error
     filenames = capture([
         'pacman', '--config', WORK / 'pacman.conf', '--dbpath', WORK / 'db',
@@ -263,6 +297,7 @@ def bootstrap(root):
         identity.unlink()
     command(['pacman', '--root', root, '--config', WORK / 'pacman.conf',
              '-U', '--noconfirm', *local_packages()])
+    configure_browser(root)
     shutil.copyfile(root / 'usr/share/constos/pacman.conf', root / 'etc/pacman.conf')
     if not re.search(r"^ID=['\"]?constos['\"]?$", identity.read_text(), re.M):
         raise RuntimeError('The ConstOS release metadata is missing from the target.')
@@ -272,7 +307,7 @@ def bootstrap(root):
 
 def finalize(root):
     root = Path(root)
-    # Akun/login dibuat modul users upstream, bukan salinan passwd/shadow live.
+    # Akun dibuat pada target melalui useradd, terpisah dari profil live.
     passwd = (root / 'etc/passwd').read_text()
     if any(line.split(':', 1)[0] == 'liveuser' for line in passwd.splitlines()):
         raise RuntimeError('The live user exists on the target. Installation stopped.')
@@ -285,7 +320,9 @@ def finalize(root):
     grub_text = grub.read_text()
     grub_text = re.sub(r'^GRUB_CMDLINE_LINUX_DEFAULT=.*$',
                        'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"', grub_text, flags=re.M)
-    grub.write_text(grub_text)
+    grub_text = re.sub(r'^GRUB_(?:DISTRIBUTOR|DISABLE_BOOTNEXT)=.*(?:\n|$)', '', grub_text, flags=re.M)
+    # 31_efi_bootnext upstream menghormati opsi ini; recovery/UEFI tetap tersedia.
+    grub.write_text(grub_text.rstrip() + '\nGRUB_DISTRIBUTOR="Tsukuyomi"\nGRUB_DISABLE_BOOTNEXT=true\n')
     for unit in ('NetworkManager.service', 'sddm.service', 'systemd-timesyncd.service',
                  'bluetooth.service', 'snapper-timeline.timer', 'snapper-cleanup.timer'):
         command(['systemctl', '--root', root, 'enable', unit])
@@ -352,61 +389,122 @@ def unmount(*, required=False):
         marker.unlink()
 
 
-def launch():
+def validate_plan(plan):
+    patterns = {
+        'browser': r'[a-z]+',
+        'username': r'[a-z_][a-z0-9_-]{0,31}',
+        'hostname': r'[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?',
+        'full_name': r'[^:\x00-\x1f\x7f]{0,100}',
+        'password_hash': r'\$6\$[./0-9A-Za-z]{1,16}\$[./0-9A-Za-z]{86}',
+        'locale': r'[a-zA-Z0-9_.@-]+',
+        'timezone': r'[a-zA-Z0-9_+/-]+',
+        'keymap': r'[a-zA-Z0-9_-]+',
+        'xkb_layout': r'[a-zA-Z0-9_-]+',
+        'xkb_variant': r'[a-zA-Z0-9_-]*',
+    }
+    if not isinstance(plan, dict) or not isinstance(plan.get('disk'), dict):
+        raise RuntimeError('Review the disk and account before installing.')
+    for key, pattern in patterns.items():
+        value = plan.get(key)
+        if not isinstance(value, str) or not re.fullmatch(pattern, value):
+            raise RuntimeError(f'Invalid installation choice: {key}.')
+    if plan['username'] in {'root', 'liveuser', 'nobody', 'bin', 'daemon', 'dbus', 'sddm'} or plan['username'].startswith('systemd-'):
+        raise RuntimeError('Choose a username that is not reserved by the system.')
+    browser_choice(plan['browser'])
+    locales = {line.split()[0] for line in Path('/usr/share/i18n/SUPPORTED').read_text().splitlines()
+               if line.strip() and not line.startswith('#')}
+    if plan['locale'] not in locales:
+        raise RuntimeError('Choose a supported system locale.')
+    try:
+        ZoneInfo(plan['timezone'])
+    except (ValueError, ZoneInfoNotFoundError) as error:
+        raise RuntimeError('Choose a supported time zone.') from error
+
+
+def configure_target(root, plan):
+    root = Path(root)
+    etc = root / 'etc'
+    (etc / 'hostname').write_text(plan['hostname'] + '\n')
+    with (etc / 'hosts').open('a') as hosts:
+        hosts.write(f"\n127.0.1.1 {plan['hostname']}\n")
+    (etc / 'localtime').unlink(missing_ok=True)
+    (etc / 'localtime').symlink_to(Path('/usr/share/zoneinfo') / plan['timezone'])
+    (etc / 'locale.conf').write_text('LANG=' + plan['locale'] + '\n')
+    supported = (root / 'usr/share/i18n/SUPPORTED').read_text().splitlines()
+    (etc / 'locale.gen').write_text(next(line for line in supported if line.split()[:1] == [plan['locale']]) + '\n')
+    command(['arch-chroot', root, 'locale-gen'])
+    (etc / 'vconsole.conf').write_text(
+        'KEYMAP={keymap}\nXKBLAYOUT={xkb_layout}\nXKBVARIANT={xkb_variant}\n'.format(**plan))
+    keyboard = etc / 'X11/xorg.conf.d/00-keyboard.conf'
+    keyboard.parent.mkdir(parents=True, exist_ok=True)
+    keyboard.write_text('Section "InputClass"\n    Identifier "ConstOS keyboard"\n'
+                        '    MatchIsKeyboard "on"\n    Option "XkbLayout" "{xkb_layout}"\n'
+                        '    Option "XkbVariant" "{xkb_variant}"\nEndSection\n'.format(**plan))
+    # Dux memakai penanda per seri versi untuk kartu What’s New pada login awal.
+    shell_package = capture(['pacman', '--root', root, '-Q', 'dux-shell'])
+    if release := re.match(r'^dux-shell (?:[0-9]+:)?v?([0-9]+\.[0-9]+)', shell_package):
+        series = release[1]
+        (etc / 'skel/.config/dms' / f'.changelog-{series}').write_text(series + '\n')
+    user = plan['username']
+    command(['arch-chroot', root, 'useradd', '-m', '-U', '-G', 'wheel', '-s', '/usr/bin/fish',
+             '-c', plan['full_name'], '--', user])
+    command(['arch-chroot', root, 'chpasswd', '-e'], input=user + ':' + plan['password_hash'] + '\n')
+    command(['arch-chroot', root, 'usermod', '-L', 'root'])
+    sudoers = etc / 'sudoers.d/10-constos-admin'
+    sudoers.parent.mkdir(exist_ok=True)
+    sudoers.write_text('%wheel ALL=(ALL:ALL) ALL\n')
+    sudoers.chmod(0o440)
+    command(['systemd-machine-id-setup', '--root', root])
+
+
+def stage(name, callback, *args, **kwargs):
+    print(f'@@CONST_STEP {name}', flush=True)
+    return callback(*args, **kwargs)
+
+
+def install(plan):
     require_live()
+    validate_plan(plan)
     WORK.mkdir(mode=0o700, exist_ok=True)
     WORK.chmod(0o700)
     with (WORK / 'lock').open('w') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if (WORK / 'root').exists():
             raise RuntimeError('A previous installation mount still exists. Reboot the ISO before trying again.')
-        # Simpan juga error loader/branding yang terjadi sebelum logger Qt siap.
-        log_path = WORK / 'calamares.log'
-        with log_path.open('w') as log:
-            os.fchmod(log.fileno(), 0o600)
-            command(['calamares', '--version'], stdout=log, stderr=subprocess.STDOUT)
         (WORK / 'disk.json').unlink(missing_ok=True)
         scan_disks()
         try:
-            with log_path.open('a') as log:
-                return command(['calamares', '--config', '/usr/share/constos/installer/calamares'],
-                               stdout=log, stderr=subprocess.STDOUT).returncode
+            stage('preflight', preflight, json.dumps(plan['disk']), plan['browser'])
+            stage('download', download)
+            root = stage('storage', storage)
+            stage('bootstrap', bootstrap, root)
+            stage('configure', configure_target, root, plan)
+            stage('finalize', finalize, root)
+            stage('unmount', unmount, required=True)
         finally:
             unmount()
 
 
-if __name__ == '__main__':
+def main():
     os.environ.update(LANG='C.UTF-8', LC_ALL='C.UTF-8', LANGUAGE='en_US:en')
-    if sys.argv[1:] == ['--scan-disks']:
-        try:
-            require_live()
-            scan_disks()
-        except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
-            print(error, file=sys.stderr)
-            sys.exit(1)
-        sys.exit(0)
+    require_live()
+    uid = int(os.environ.get('SUDO_UID', os.getuid()))
+    if uid and pwd.getpwuid(uid).pw_name != 'liveuser':
+        raise RuntimeError('The installer is available only to the live ISO user.')
+    if sys.argv[1:] == ['--list-disks']:
+        print(json.dumps(eligible_disks()))
+    elif len(sys.argv) == 1:
+        raw = sys.stdin.buffer.read(16385)
+        if len(raw) > 16384:
+            raise RuntimeError('The installation plan is too large.')
+        install(json.loads(raw))
+    else:
+        raise RuntimeError('Unknown installer command.')
+
+
+if __name__ == '__main__':
     try:
-        uid = int(os.environ.get('SUDO_UID', os.getuid()))
-        if uid:
-            import pwd
-            if pwd.getpwuid(uid).pw_name != 'liveuser':
-                raise RuntimeError('The launcher is available only to the live ISO user.')
-            runtime = Path(f'/run/user/{uid}')
-            display = sys.argv[1] if len(sys.argv) == 2 else ''
-            if not re.fullmatch(r'wayland-[0-9]+', display) or runtime.stat().st_uid != uid:
-                raise RuntimeError('Invalid Wayland session.')
-            if not stat.S_ISSOCK((runtime / display).stat().st_mode):
-                raise RuntimeError('The Wayland socket is unavailable.')
-            os.environ.update(
-                XDG_RUNTIME_DIR=str(runtime), WAYLAND_DISPLAY=display,
-                QT_QPA_PLATFORM='wayland', QT_QUICK_BACKEND='software',
-                GDK_BACKEND='wayland', GSK_RENDERER='cairo',
-            )
-        sys.exit(launch())
-    except subprocess.CalledProcessError as error:
-        subprocess.run(['zenity', '--error', '--no-markup', '--text',
-                        f'Installation stopped. Check /run/constos-installer/calamares.log and /run/constos-installer/pacman.log.\n{error}'])
-        sys.exit(1)
-    except Exception as error:
-        subprocess.run(['zenity', '--error', '--no-markup', '--text', str(error)])
+        main()
+    except (OSError, RuntimeError, ValueError, subprocess.CalledProcessError) as error:
+        print(f'Installation stopped: {error}', file=sys.stderr)
         sys.exit(1)

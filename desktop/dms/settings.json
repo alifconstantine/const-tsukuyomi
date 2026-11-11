@@ -1,0 +1,38 @@
+{
+  "currentThemeName": "custom",
+  "customThemeFile": "/usr/share/constos/desktop/theme.json",
+  "acLockTimeout": 300,
+  "batteryLockTimeout": 300,
+  "loginctlLockIntegration": true,
+  "barConfigs": [
+    {
+      "id": "default",
+      "name": "Tsukuyomi",
+      "enabled": true,
+      "position": 0,
+      "screenPreferences": [
+        "all"
+      ],
+      "leftWidgets": [
+        "launcherButton",
+        "workspaceSwitcher"
+      ],
+      "centerWidgets": [
+        "clock"
+      ],
+      "rightWidgets": [
+        "systemTray",
+        "notificationButton",
+        "battery",
+        "controlCenterButton"
+      ],
+      "spacing": 6,
+      "innerPadding": 5,
+      "bottomGap": 8,
+      "barLengthMode": "percent",
+      "barLengthPercent": 96,
+      "attachToScreenEdge": false,
+      "transparency": 0.92
+    }
+  ]
+}

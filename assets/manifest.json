@@ -4,28 +4,96 @@
     {
       "id": "const-mark",
       "name": "Simbol Const untuk ConstOS",
-      "owner_package": "constos-desktop",
+      "owner_package": null,
       "source": "const-logo.svg",
-      "reference_rasters": ["const-logo-dark.png", "icon.png"],
+      "reference_rasters": [
+        "const-logo-dark.png",
+        "icon.png"
+      ],
       "origin": "Simbol logo Const pada README ConstOS; digambar ulang sebagai dua path vektor tanpa menyematkan raster.",
       "decision": "Dipilih pengguna pada 7 November 2026 untuk menggantikan logo C geometris pada boot dan desktop.",
       "license_status": "Asal lisensi dan izin redistribusi logo sumber belum diaudit; tidak diasumsikan mengikuti lisensi kode proyek.",
-      "release_blocker": "Dokumentasikan pemilik hak logo dan izin redistribusi sebelum rilis publik.",
-      "view_box": [64, 64, 384, 384],
+      "view_box": [
+        64,
+        64,
+        384,
+        384
+      ],
       "variants": {
         "default": "Putih #F5F5F5 pada latar transparan, tanpa aksen adaptif.",
         "light_surface": "Hitam #161616 pada latar transparan.",
         "application_icon": "Simbol putih di atas badge netral #161616 agar terbaca pada tema terang/gelap."
       },
       "exports": [
-        {"path": "exports/const-logo-boot.png", "width": 160, "height": 160, "format": "PNG RGBA", "usage": ["GRUB", "Plymouth"]},
-        {"path": "exports/const-logo-black.svg", "format": "SVG", "usage": ["README tema terang", "Calamares productWelcome"]},
-        {"path": "exports/constos.svg", "format": "SVG", "usage": ["ikon hicolor constos", "Calamares productIcon"]}
+        {
+          "path": "exports/const-logo-boot.png",
+          "width": 160,
+          "height": 160,
+          "format": "PNG RGBA",
+          "usage": [
+            "ekspor historis"
+          ]
+        },
+        {
+          "path": "exports/const-logo-black.svg",
+          "format": "SVG",
+          "usage": [
+            "ekspor historis"
+          ]
+        },
+        {
+          "path": "exports/constos.svg",
+          "format": "SVG",
+          "usage": [
+            "ekspor historis"
+          ]
+        }
       ],
-      "direct_svg_usage": ["README tema gelap", "SDDM", "Calamares productLogo", "/usr/share/constos/branding/const-logo.svg"],
+      "direct_svg_usage": [],
       "regenerate": "python3 assets/export-logo.py",
-      "export_dependencies": ["Python 3", "rsvg-convert (librsvg)"],
-      "build_policy": "Build memakai ekspor yang dikomit dan tidak memerlukan renderer, koneksi, atau layanan generasi gambar."
+      "export_dependencies": [
+        "Python 3",
+        "rsvg-convert (librsvg)"
+      ],
+      "build_policy": "SVG/PNG tidak masuk runtime. Turunan ASCII desktop/fastfetch/const.txt dipasang constos-desktop hanya untuk Fastfetch terminal.",
+      "ascii_export": {
+        "path": "../desktop/fastfetch/const.txt",
+        "regenerate": "python3 assets/export-ascii.py",
+        "dependencies": [
+          "Python 3",
+          "Pillow",
+          "rsvg-convert"
+        ],
+        "usage": [
+          "Fastfetch terminal"
+        ],
+        "license_status": "Asal lisensi dan izin redistribusi logo sumber belum diaudit; tidak diasumsikan mengikuti lisensi kode proyek."
+      }
+    },
+    {
+      "id": "const-desktop-wallpaper",
+      "source": "../desktop/dms/wallpaper.svg",
+      "origin": "SVG asli ConstOS",
+      "owner_package": "constos-desktop",
+      "license_status": "GPL-3.0"
+    },
+    {
+      "id": "ryoku-plymouth-controls",
+      "source": "../desktop/boot/plymouth/constos.script",
+      "origin": "Ryoku v1.0.7 f7197d72, system/boot/plymouth/ryoku",
+      "owner_package": "constos-desktop",
+      "license_status": "GPL-3.0",
+      "usage": [
+        "kontrol password dan progres Plymouth tanpa logo"
+      ]
+    },
+    {
+      "id": "ryoku-welcome-shortcuts",
+      "source": "../desktop/welcome/qml",
+      "origin": "Ryoku v1.0.7 f7197d72, welcome PageEssentials/PageTitle/ActionKey dan ui/Keycap",
+      "license_status": "GPL-3.0; LICENSE dan NOTICE disertakan",
+      "owner_package": "constos-desktop",
+      "adaptation": "Shortcut Hyprland/Dux aktual, token dark crimson, keyboard dan scroll responsif. Tanpa logo atau aset gambar."
     }
   ]
 }

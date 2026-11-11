@@ -1,9 +1,9 @@
 [Plymouth Theme]
-Name=ConstOS
-Description=Logo statis dan progres boot ConstOS
+Name=Tsukuyomi
+Description=Status boot Tsukuyomi
 ModuleName=script
 
 [script]
 ImageDir=/usr/share/plymouth/themes/constos
 ScriptFile=/usr/share/plymouth/themes/constos/constos.script
-Font=Noto Sans 14
+Font=Monospace 14

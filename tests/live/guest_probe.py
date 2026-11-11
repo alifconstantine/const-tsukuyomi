@@ -178,11 +178,9 @@ def package_versions(probe):
 
 
 def installer_runtime(probe):
-    version = probe.run("env", "QT_QPA_PLATFORM=offscreen", "calamares", "--version")
-    probe.metrics["calamares_version"] = version
-    return "calamares" in version.lower() and bool(re.search(r"\b3\.4\.\d+\b", version)), {
-        "version": version, "required_module_abi": "3.4",
-    }
+    version = probe.run("constos-tui", "--version")
+    probe.metrics["installer_version"] = version
+    return bool(re.fullmatch(r"constos-tui [0-9.]+", version)), {"version": version}
 
 
 def live_sessions():

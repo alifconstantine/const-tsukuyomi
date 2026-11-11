@@ -1,0 +1,4 @@
+{
+  "logo": {"type": "file", "source": "/usr/share/constos/desktop/const.txt", "color": {"1": "#c66b76"}, "padding": {"right": 3}},
+  "modules": ["title", "separator", "os", "kernel", "uptime", "shell", "terminal", "wm", "cpu", "memory", "break", "colors"]
+}

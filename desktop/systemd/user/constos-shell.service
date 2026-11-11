@@ -1,0 +1,14 @@
+[Unit]
+Description=Const desktop shell
+PartOf=constos-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+Type=notify
+NotifyAccess=main
+Environment=QS_DISABLE_CRASH_HANDLER=1
+ExecStart=/usr/bin/dms run --session
+Restart=on-failure
+RestartSec=2
+TimeoutStartSec=90
+TimeoutStopSec=10

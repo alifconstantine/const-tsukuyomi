@@ -3,8 +3,8 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path
+import shutil
 import stat
-import subprocess
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -98,26 +98,12 @@ class DiskConfirmationTests(unittest.TestCase):
         self.assertEqual(json.loads((self.work / 'disk.json').read_text()), self.disk)
 
 
-class InstallerLaunchTests(unittest.TestCase):
-    def test_launches_wizard_without_an_eligible_disk(self):
-        with tempfile.TemporaryDirectory() as directory:
-            work = Path(directory)
-            (work / 'disk.json').write_text('{"path": "/dev/previous"}')
-
-            def run(args, **kwargs):
-                if args[:2] == ['calamares', '--config']:
-                    self.assertEqual(json.loads((work / 'eligible-disks.json').read_text()), [])
-                    self.assertFalse((work / 'disk.json').exists())
-                else:
-                    self.assertEqual(args, ['calamares', '--version'])
-                return subprocess.CompletedProcess(args, 0)
-
-            with patch.object(backend, 'WORK', work), patch.object(backend, 'require_live'), \
-                    patch.object(backend, 'eligible_disks', return_value=[]), \
-                    patch.object(backend, 'fcntl', SimpleNamespace(flock=lambda *_: None, LOCK_EX=1, LOCK_NB=2)), \
-                    patch.object(backend.os, 'fchmod', create=True), patch.object(backend, 'command', side_effect=run) as command:
-                self.assertEqual(backend.launch(), 0)
-            self.assertEqual(command.call_count, 2)
+class InstallerPlanTests(unittest.TestCase):
+    def test_plan_without_reviewed_disk_is_rejected_before_storage(self):
+        with patch.object(backend, 'require_live'), patch.object(backend, 'storage') as storage:
+            with self.assertRaisesRegex(RuntimeError, 'Review the disk'):
+                backend.install({'disk': '/dev/vda'})
+            storage.assert_not_called()
 
 
 class PreflightSafetyTests(unittest.TestCase):
@@ -162,6 +148,45 @@ class PreflightSafetyTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, 'disk changed'):
                     backend.storage()
                 command.assert_not_called()
+
+
+class BrowserSelectionTests(unittest.TestCase):
+    def test_selected_browser_alone_enters_transaction_and_sets_mime_defaults(self):
+        source = Path(__file__).resolve().parents[2] / 'installer'
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shutil.copyfile(source / 'browsers.json', root / 'browsers.json')
+            (root / 'target-packages.x86_64').write_text('base\nextra/dux-shell\n')
+            defaults = root / 'etc/skel/.config/mimeapps.list'
+            defaults.parent.mkdir(parents=True)
+            original = '[Default Applications]\ninode/directory=org.gnome.Nautilus.desktop;\n'
+            applications = root / 'usr/share/applications'
+            applications.mkdir(parents=True)
+            browsers = {
+                'firefox': ('firefox', 'firefox.desktop'),
+                'chromium': ('chromium', 'chromium.desktop'),
+                'zen': ('zen-browser-bin', 'zen.desktop'),
+                'none': (None, None),
+            }
+
+            with patch.object(backend, 'DATA', root), patch.object(backend, 'WORK', root):
+                for choice, (package, desktop) in browsers.items():
+                    with self.subTest(choice=choice):
+                        (root / 'browser').write_text(choice)
+                        defaults.write_text(original)
+                        self.assertEqual(backend.packages(), ['base', 'extra/dux-shell'] + ([package] if package else []))
+                        if desktop:
+                            (applications / desktop).touch()
+                        backend.configure_browser(root)
+                        actual = defaults.read_text()
+                        self.assertIn('inode/directory=org.gnome.Nautilus.desktop;', actual)
+                        for handler in ('x-scheme-handler/http', 'x-scheme-handler/https', 'text/html'):
+                            if desktop:
+                                self.assertIn(f'{handler}={desktop};', actual)
+                            else:
+                                self.assertNotIn(f'{handler}=', actual)
+                with self.assertRaisesRegex(RuntimeError, 'Choose a browser'):
+                    backend.browser_choice('unapproved-package')
 
 
 if __name__ == '__main__':

@@ -1,18 +1,9 @@
-Sumber identitas boot ConstOS
+GRUB theme and Plymouth script are modified from Ryoku v1.0.7,
+f7197d72de8a21e44b0bea922bdd915f28f6b327, under GPL-3.0.
+Source: https://github.com/Ryoku-dev/ryoku
+Paths: fedora/system/boot/grub/theme and system/boot/plymouth/ryoku.
 
-Logo resmi memakai simbol Const yang dipilih pemilik proyek, digambar ulang
-sebagai path dalam assets/const-logo.svg dari raster logo Const yang sudah ada.
-GRUB/Plymouth memakai ekspor PNG transparan; SDDM dan installer memakai SVG.
-Asal, ekspor, serta status izin dicatat di assets/manifest.json.
-Pemilihan oleh pengguna bukan bukti lisensi redistribusi aset asal; audit
-hak merek/aset tetap diperlukan sebelum publikasi distro.
-
-Kode tema GRUB, Plymouth, dan SDDM dalam direktori ini ditulis khusus untuk
-ConstOS; API merujuk dokumentasi upstream GRUB, Plymouth script plugin, dan
-SDDM. Tidak menyalin kode tema pihak ketiga. Font runtime
-Noto Sans berasal dari paket noto-fonts dengan lisensi paketnya sendiri.
-
-Sumber API:
-https://www.gnu.org/software/grub/manual/grub/html_node/Theme-file-format.html
-https://www.freedesktop.org/wiki/Software/Plymouth/Scripts/
-https://github.com/sddm/sddm/blob/develop/docs/THEMING.md
+SDDM host and Clockwork Orbital are modified from the same Ryoku source.
+Clockwork Orbital comes from qylock by Darkkal44, commit
+cde4d11e9e3d385620becdc877a0521e40a55e47, under the accompanying LICENSE.
+Source: https://github.com/Darkkal44/qylock

@@ -1,4 +1,4 @@
-local terminal = "foot"
+local terminal = "kitty"
 local lock = "constos-lock"
 
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "auto" })
@@ -10,9 +10,15 @@ hl.config({
         border_size = 2,
         layout = "dwindle",
     },
-    decoration = { rounding = 8 },
-    input = { kb_layout = "us" },
-    misc = { disable_hyprland_logo = true, force_default_wallpaper = 0 },
+    decoration = {
+        rounding = 12,
+        blur = { enabled = true, size = 6, passes = 2 },
+    },
+    input = {
+        kb_layout = os.getenv("XKB_DEFAULT_LAYOUT") or "us",
+        kb_variant = os.getenv("XKB_DEFAULT_VARIANT") or "",
+    },
+    misc = { disable_hyprland_logo = true, disable_splash_rendering = true, force_default_wallpaper = 0 },
 })
 
 hl.on("hyprland.start", function()
@@ -20,8 +26,10 @@ hl.on("hyprland.start", function()
 end)
 
 hl.bind("SUPER + Return", hl.dsp.exec_cmd(terminal))
-hl.bind("SUPER + E", hl.dsp.exec_cmd("thunar"))
-hl.bind("SUPER + Space", hl.dsp.exec_cmd("wofi --show drun"))
+hl.bind("SUPER + E", hl.dsp.exec_cmd("nautilus"))
+hl.bind("SUPER + Space", hl.dsp.exec_cmd("dms ipc call spotlight toggle || wofi --show drun"))
+hl.bind("SUPER + comma", hl.dsp.exec_cmd("dms ipc call settings focusOrToggle"))
+hl.bind("SUPER + A", hl.dsp.exec_cmd("dms ipc call control-center toggle"))
 hl.bind("SUPER + Q", hl.dsp.window.close())
 hl.bind("SUPER + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind("SUPER + L", hl.dsp.exec_cmd(lock))

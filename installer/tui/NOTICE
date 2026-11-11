@@ -1,0 +1,8 @@
+The wizard, terminal layout and selected helpers are modified from the
+Ryoku v1.0.7 installer under GPL-3.0. Copyright Ryoku contributors.
+Source: https://github.com/Ryoku-dev/ryoku
+Commit: f7197d72de8a21e44b0bea922bdd915f28f6b327
+Paths: installation/tui, installation/installerplan and ryoku/i18n.
+
+ConstOS changes the palette, drops the logos and product-specific flows,
+and hands the reviewed selections to the ConstOS installation backend.

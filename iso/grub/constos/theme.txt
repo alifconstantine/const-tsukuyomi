@@ -1,59 +1,71 @@
-# Palet vendor statis design.md; logo raster diekspor dari assets/const-logo.svg.
-desktop-color: "#161616"
+# Adaptasi tema GRUB Ryoku Fedora (GPL-3.0), f7197d72.
 title-text: ""
-message-color: "#F5F5F5"
-message-bg-color: "#161616"
+desktop-color: "#060607"
 terminal-font: "Unifont Regular 16"
-+ image {
-    left = 50%-56
-    top = 12%
-    width = 112
-    height = 112
-    file = "logo.png"
+# Full screen: GRUB boots an entry inside its terminal window, and the default
+# window is an empty rectangle in the middle of the wallpaper.
+terminal-left: "0"
+terminal-top: "0"
+terminal-width: "100%"
+terminal-height: "100%"
+message-font: "Unifont Regular 16"
+message-color: "#B0B0B0"
+
++ label {
+  left = 0
+  top = 7%
+  width = 100%
+  align = "center"
+  font = "Unifont Regular 16"
+  color = "#c66b76"
+  text = "Tsukuyomi Bootloader"
 }
 
 + label {
-    left = 10%
-    top = 36%
-    width = 80%
-    align = "center"
-    text = "ConstOS"
-    font = "Unifont Regular 16"
-    color = "#F5F5F5"
+  left = 0
+  top = 7%+48
+  width = 100%
+  align = "center"
+  font = "Unifont Regular 16"
+  color = "#B0B0B0"
+  text = "ARROWS Select    ENTER Boot    ESC Back"
+}
+
++ label {
+  left = 0
+  top = 7%+76
+  width = 100%
+  align = "center"
+  font = "Unifont Regular 16"
+  color = "#B0B0B0"
+  text = "E Edit entry    C Console"
 }
 
 + boot_menu {
-    left = 10%
-    top = 44%
-    width = 80%
-    height = 34%
-    item_font = "Unifont Regular 16"
-    item_color = "#B0B0B0"
-    selected_item_color = "#60A5FA"
-    item_height = 40
-    item_spacing = 8
-    item_padding = 12
-    icon_width = 0
-    icon_height = 0
+  left = 20%
+  top = 28%
+  width = 60%
+  height = 36%
+  item_font = "Unifont Regular 16"
+  item_color = "#F5F5F5"
+  selected_item_font = "Unifont Regular 16"
+  selected_item_color = "#c66b76"
+  icon_width = 0
+  icon_height = 0
+  item_icon_space = 14
+  item_height = 32
+  item_padding = 10
+  item_spacing = 4
+  scrollbar = false
 }
 
 + label {
-    left = 5%
-    top = 79%
-    width = 90%
-    align = "center"
-    text = "Up/Down: select   Enter: boot   e: edit   c: GRUB console"
-    font = "Unifont Regular 16"
-    color = "#B0B0B0"
-}
-
-+ label {
-    id = "__timeout__"
-    left = 5%
-    top = 86%
-    width = 90%
-    align = "center"
-    text = "Booting selected entry in %d seconds"
-    font = "Unifont Regular 16"
-    color = "#60A5FA"
+  id = "__timeout__"
+  left = 0
+  top = 92%
+  width = 100%
+  align = "center"
+  font = "Unifont Regular 16"
+  color = "#c66b76"
+  text = "Booting in %d s"
 }

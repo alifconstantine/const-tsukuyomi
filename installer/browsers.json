@@ -1,0 +1,12 @@
+{
+  "mode": "required",
+  "method": "legacy",
+  "labels": {"step": "Browser"},
+  "default": "firefox",
+  "items": [
+    {"id": "firefox", "name": "Firefox · Recommended", "description": "A familiar browser with tracking protection.", "package": "firefox", "desktop": "firefox.desktop"},
+    {"id": "chromium", "name": "Chromium", "description": "An open-source browser based on the Chromium engine.", "package": "chromium", "desktop": "chromium.desktop"},
+    {"id": "zen", "name": "Zen Browser", "description": "A Firefox-based browser with vertical tabs.", "package": "zen-browser-bin", "desktop": "zen.desktop"},
+    {"id": "none", "name": "No browser", "description": "Start with the core desktop and choose a browser later.", "package": "", "desktop": ""}
+  ]
+}

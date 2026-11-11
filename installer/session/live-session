@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -eu
+unset DISPLAY WAYLAND_DISPLAY
+export WLR_RENDERER=pixman CONSTOS_SESSION=graphical CONSTOS_XKB=us
+layout="${XDG_RUNTIME_DIR:?}/constos-xkb"
+rm -f -- "$layout"
+while true; do
+    /usr/bin/cage -s -m last -- /usr/lib/constos-installer/kiosk
+    [[ -f "$layout" ]] || exit 0
+    mapfile -t keys < "$layout"
+    rm -f -- "$layout"
+    export CONSTOS_KB_PRESET="${keys[0]}" CONSTOS_XKB="${keys[1]}"
+    export XKB_DEFAULT_LAYOUT="${keys[1]}" XKB_DEFAULT_VARIANT="${keys[2]}"
+done

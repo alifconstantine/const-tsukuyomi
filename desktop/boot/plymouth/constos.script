@@ -1,96 +1,63 @@
-# Sumber asli ConstOS. Esc/log ditangani plymouthd, bukan ditangkap tema.
-Window.SetBackgroundTopColor (0.086, 0.086, 0.086);
-Window.SetBackgroundBottomColor (0.086, 0.086, 0.086);
+# Adaptasi terminal boot Tsukuyomi; callback Plymouth memakai progres nyata.
+# Bagian interaksi kata sandi berasal dari Ryoku v1.0.7 (GPL-3.0).
+Window.SetBackgroundTopColor(0.071, 0.055, 0.067);
+Window.SetBackgroundBottomColor(0.071, 0.055, 0.067);
+global.status_text = "Waiting for the graphical session...";
+global.boot_fraction = 0;
+global.password_active = 0;
 
-logo.image = Image ("logo.png");
-logo.sprite = Sprite (logo.image);
-logo.sprite.SetPosition (Window.GetWidth () / 2 - logo.image.GetWidth () / 2,
-                         Window.GetHeight () * 0.36 - logo.image.GetHeight () / 2, 1);
+prompt.image = Image.Text("tsukuyomi@boot:~$ systemctl start graphical.target", 0.776, 0.420, 0.463);
+prompt.sprite = Sprite(prompt.image);
+prompt.x = Window.GetWidth() / 2 - prompt.image.GetWidth() / 2;
+if (prompt.x < 24) prompt.x = 24;
+prompt.y = Window.GetHeight() / 2 - 64;
+prompt.sprite.SetPosition(prompt.x, prompt.y, 1);
+status.sprite = Sprite();
+progress.sprite = Sprite();
 
-title.image = Image.Text ("ConstOS", 0.96, 0.96, 0.96, 1, "Noto Sans 18");
-title.sprite = Sprite (title.image);
-title.sprite.SetPosition (Window.GetWidth () / 2 - title.image.GetWidth () / 2,
-                          Window.GetHeight () * 0.36 + 96, 1);
-
-track.image = Image ("progress-track.png");
-track.sprite = Sprite (track.image);
-track.x = Window.GetWidth () / 2 - track.image.GetWidth () / 2;
-track.y = Window.GetHeight () * 0.62;
-track.sprite.SetPosition (track.x, track.y, 1);
-progress.original = Image ("progress.png");
-progress.sprite = Sprite ();
-progress.sprite.SetPosition (track.x, track.y, 2);
-progress.width = 0;
-
-fun boot_progress (duration, fraction)
-{
-    local.width = Math.Max (1, Math.Int (progress.original.GetWidth () * Math.Min (1, Math.Max (0, fraction))));
-    if (width != progress.width)
-    {
-        progress.sprite.SetImage (progress.original.Scale (width, progress.original.GetHeight ()));
-        progress.width = width;
+fun render_status() {
+    status.image = Image.Text(global.status_text, 0.776, 0.714, 0.737);
+    status.sprite.SetImage(status.image);
+    status.sprite.SetPosition(prompt.x, prompt.y + 42, 1);
+    bar = "[";
+    filled = Math.Int(global.boot_fraction * 28);
+    for (i = 0; i < 28; i++) {
+        if (i < filled) bar += "#";
+        else bar += "-";
+    }
+    bar += "]  " + Math.Int(global.boot_fraction * 100) + "%";
+    progress.sprite.SetImage(Image.Text(bar, 0.776, 0.420, 0.463));
+    progress.sprite.SetPosition(prompt.x, prompt.y + 80, 1);
+}
+fun progress_callback(duration, progress) {
+    if (global.password_active == 0) {
+        if (Math.Int(progress * 100) > Math.Int(global.boot_fraction * 100)) {
+            global.boot_fraction = progress;
+            render_status();
+        }
     }
 }
-Plymouth.SetBootProgressFunction (boot_progress);
-
-hint.image = Image.Text ("Esc: tampilkan log boot", 0.69, 0.69, 0.69, 1, "Noto Sans 12");
-hint.sprite = Sprite (hint.image);
-hint.sprite.SetPosition (Window.GetWidth () / 2 - hint.image.GetWidth () / 2,
-                         Window.GetHeight () * 0.86, 1);
-
-prompt.sprite = Sprite ();
-entry.sprite = Sprite ();
-message.sprite = Sprite ();
-
-fun show_prompt (text, response)
-{
-    local.image = Image.Text (text, 0.96, 0.96, 0.96, 1, "Noto Sans 14");
-    prompt.sprite.SetImage (image);
-    prompt.sprite.SetPosition (Window.GetWidth () / 2 - image.GetWidth () / 2,
-                               Window.GetHeight () * 0.69, 3);
-    local.answer = Image.Text (response, 0.376, 0.647, 0.98, 1, "Noto Sans 14");
-    entry.sprite.SetImage (answer);
-    entry.sprite.SetPosition (Window.GetWidth () / 2 - answer.GetWidth () / 2,
-                              Window.GetHeight () * 0.74, 3);
-    prompt.sprite.SetOpacity (1);
-    entry.sprite.SetOpacity (1);
+fun update_callback(text) {
+    if (global.password_active == 0) {
+        global.status_text = text;
+        render_status();
+    }
 }
-
-fun password_prompt (text, bullets)
-{
-    local.response = "";
-    for (local.index = 0; index < bullets; index++)
-        response += "*";
-    show_prompt (text, response);
+fun password_callback(text, bullets) {
+    global.password_active = 1;
+    masked = "";
+    for (i = 0; i < bullets; i++) masked += "*";
+    global.status_text = text + "  " + masked;
+    render_status();
 }
-
-fun question_prompt (text, response)
-{
-    show_prompt (text, response);
+fun normal_callback() {
+    global.password_active = 0;
+    global.status_text = "Waiting for the graphical session...";
+    render_status();
 }
-
-fun normal_display ()
-{
-    prompt.sprite.SetOpacity (0);
-    entry.sprite.SetOpacity (0);
-}
-
-fun display_message (text)
-{
-    local.image = Image.Text (text, 0.69, 0.69, 0.69, 1, "Noto Sans 12");
-    message.sprite.SetImage (image);
-    message.sprite.SetPosition (Window.GetWidth () / 2 - image.GetWidth () / 2,
-                                Window.GetHeight () * 0.93, 3);
-    message.sprite.SetOpacity (1);
-}
-
-fun hide_message (text)
-{
-    message.sprite.SetOpacity (0);
-}
-
-Plymouth.SetDisplayPasswordFunction (password_prompt);
-Plymouth.SetDisplayQuestionFunction (question_prompt);
-Plymouth.SetDisplayNormalFunction (normal_display);
-Plymouth.SetDisplayMessageFunction (display_message);
-Plymouth.SetHideMessageFunction (hide_message);
+Plymouth.SetBootProgressFunction(progress_callback);
+Plymouth.SetUpdateStatusFunction(update_callback);
+Plymouth.SetDisplayMessageFunction(update_callback);
+Plymouth.SetDisplayPasswordFunction(password_callback);
+Plymouth.SetDisplayNormalFunction(normal_callback);
+render_status();

@@ -1,14 +1,29 @@
 #!/usr/bin/env bash
 set -u
-export GDK_BACKEND=wayland GSK_RENDERER=cairo
+export GDK_BACKEND=wayland GSK_RENDERER=cairo GTK_THEME=Adwaita:dark
 export LANG=C.UTF-8 LC_ALL=C.UTF-8 LANGUAGE=en_US:en
+
+# Scale the terminal cell for short outputs while preserving readable text.
+font_size=15
+for connector in /sys/class/drm/card*-*; do
+    [[ -r $connector/status && -r $connector/modes ]] || continue
+    [[ $(<"$connector/status") == connected ]] || continue
+    read -r mode <"$connector/modes" || continue
+    if [[ $mode =~ ^[0-9]+x([0-9]+)$ ]]; then
+        font_size=$((10#${BASH_REMATCH[1]} * 15 / 800))
+        ((font_size < 9)) && font_size=9
+        ((font_size > 18)) && font_size=18
+        break
+    fi
+done
 
 action='Open installer'
 while true; do
     case "$action" in
         'Open installer')
             # Return to the action chooser after cancel, success, or failure.
-            /usr/bin/constos-install
+            foot -o term=xterm-256color -o main.dpi-aware=no -f "JetBrainsMono Nerd Font:size=$font_size" -e /usr/bin/constos-install
+            [[ ! -f "$XDG_RUNTIME_DIR/constos-xkb" ]] || exit 0
             ;;
         Restart|Shut\ down)
             if [[ $action == Restart ]]; then
@@ -19,10 +34,10 @@ while true; do
             if sudo -n /usr/bin/systemctl "$power_command"; then
                 exit 0
             fi
-            zenity --error --title='ConstOS Installer' --text='The requested power action failed.'
+            zenity --error --title='Tsukuyomi Installer' --text='The requested power action failed.'
             ;;
     esac
-    action=$(zenity --list --title='ConstOS Installer' --text='Choose an action.' \
+    action=$(zenity --list --title='Tsukuyomi Installer' --text='Choose an action.' \
         --width=400 --height=280 --column='Action' --hide-header \
         --ok-label='Continue' --cancel-label='Close' 'Open installer' Restart 'Shut down') || exit 0
 done

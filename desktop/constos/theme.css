@@ -1,15 +1,15 @@
 /* Static vendor tokens from design.md; user themes remain in their own config. */
-@define-color canvas #161616;
-@define-color surface #1e1e1e;
+@define-color canvas #120e11;
+@define-color surface #1b141a;
 @define-color surface_raised #262626;
 @define-color surface_hover #303030;
 @define-color border_subtle #383838;
 @define-color control_border #808080;
 @define-color text #f5f5f5;
 @define-color text_muted #b0b0b0;
-@define-color accent #60a5fa;
-@define-color on_accent #101010;
-@define-color accent_surface #20324a;
+@define-color accent #c66b76;
+@define-color on_accent #26060e;
+@define-color accent_surface #3b1c27;
 @define-color success #4ade80;
 @define-color warning #fbbf24;
 @define-color error #f87171;

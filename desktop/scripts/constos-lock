@@ -1,5 +1,2 @@
 #!/usr/bin/env bash
-set -euo pipefail
-# Type=forking returns only after swaylock has acquired the session lock.
-# systemd serializes repeated requests and tracks the actual lock process.
-exec systemctl --user start constos-lock.service
+exec /usr/bin/dms ipc call lock lock

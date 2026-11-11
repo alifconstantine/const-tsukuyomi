@@ -1,15 +1,10 @@
 <div align="center">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/const-logo.svg"/>
-  <img src="assets/exports/const-logo-black.svg" alt="ConstOS — simbol Const" width="160"/>
-</picture>
-
 # Const Tsukuyomi
 
-**Distribusi Linux monokrom berbasis CachyOS dengan Hyprland**
+**Distribusi Linux bertema gelap berbasis CachyOS dengan Hyprland**
 
-[![Arch Linux](https://img.shields.io/badge/Base-CachyOS%20%28Arch%29-1793d1?logo=arch-linux&logoColor=white)](#)
+[![Arch Linux](https://img.shields.io/badge/Base-CachyOS%20%28Arch%29-1793d1)](#)
 [![Compositor](https://img.shields.io/badge/Compositor-Hyprland%20Wayland-00a8ff)](#)
 [![Scheduler](https://img.shields.io/badge/Kernel-BORE%20Scheduler-ff4757)](#)
 [![License](https://img.shields.io/badge/License-GPLv3-green)](#)
@@ -20,7 +15,7 @@
 
 ## Tentang ConstOS
 
-ConstOS adalah distribusi Linux berbasis CachyOS untuk pengembangan perangkat lunak dan penggunaan desktop sehari-hari. ISO menargetkan x86_64 UEFI dengan kernel CachyOS BORE. Sesi installer memakai Cage dan Calamares. Desktop Hyprland dan Waybar tersedia pada target terpasang. Const Harness adalah integrasi yang direncanakan untuk edisi berikutnya.
+ConstOS adalah distribusi Linux berbasis CachyOS untuk pengembangan perangkat lunak dan penggunaan desktop sehari-hari. ISO menargetkan x86_64 UEFI dengan kernel CachyOS BORE. Sesi installer membuka TUI Ryoku yang diadaptasi untuk ConstOS melalui Cage dan Foot. Sesi terpasang memakai Hyprland dengan Dux Shell berpreset Const. Const Harness adalah integrasi yang direncanakan untuk edisi berikutnya.
 
 ---
 
@@ -31,17 +26,17 @@ Arsitektur komponen, batas izin, dan pemisahan profil live dari sistem terpasang
 | Komponen | Status |
 | :--- | :--- |
 | Kernel | Manifest live memilih kernel CachyOS BORE. |
-| Boot dan login | Sumber ISO memilih **Install ConstOS** sebagai default dan menyediakan **ConstOS Diagnostics** untuk konsol. Installer memakai sesi Cage khusus; bahasa antarmuka bawaan adalah Inggris. Pada sistem terpasang, tema SDDM memilih akun tunggal atau akun terakhir yang masih tersedia. Pengujian ISO baru dan login aktual mengikuti roadmap. |
+| Boot dan login | ISO membuka **Install Tsukuyomi** atau **Tsukuyomi Diagnostics** dari GRUB. Sesudah status boot Plymouth, sesi installer menampilkan judul piksel **TSUKUYOMI** dan **Preparing installer** sebelum Welcome. Login memakai Clockwork Orbital dari Ryoku melalui SDDM. Dux Shell mulai setelah autentikasi. |
 | Memori dan ZRAM | Overlay live mengatur `zram-generator` dengan `zstd`, `vm.swappiness = 100`, dan `vm.vfs_cache_pressure = 50`. |
-| Storage dan installer | Calamares menampilkan daftar disk kosong minimal 32 GiB. **Install ConstOS** di **Review** memulai pemeriksaan ulang disk dan unduhan paket bertanda tangan. Wizard menampilkan status setiap job, lalu menawarkan **Restart** sesudah unmount. Jalur utama sampai login Hyprland lulus di VM UEFI dengan disk baru. Rincian build dan batas uji ada di [roadmap](implementation_plan.md). |
+| Storage dan installer | TUI menampilkan disk kosong minimal 32 GiB. Konfirmasi di **Review** memulai pemeriksaan ulang disk dan unduhan paket bertanda tangan. Wizard menampilkan tahapan backend dan menawarkan **Reboot now** sesudah unmount. Rincian build dan batas uji ada di [roadmap](implementation_plan.md). |
 | Diagnosis dan telemetri | Paket `constos-core` memasang CLI Rust `const` pada sistem terpasang. Jalankan `const doctor` tanpa `sudo` untuk memeriksa kernel, swap ZRAM, unit systemd yang gagal, ruang tersedia di `/`, serta konfigurasi Snapper dan mount `/.snapshots`. `const status --json` menyajikan snapshot metrik. Integrasi daemon Rust `constd` dan Harness masih direncanakan. |
 | Pembaruan | Jalankan `const update` dari terminal pada sistem terpasang. Jika pembaruan tersedia, pacman menampilkan paket OS dan aplikasi dari repo yang dikonfigurasi untuk dikonfirmasi dalam satu transaksi. Lihat [panduan update dan recovery](docs/acceptance-guide.md#update-dan-recovery) untuk cakupan dan verifikasi. |
 | Sandbox dan izin | Ada wrapper Bubblewrap yang menolak eksekusi saat `bwrap` tidak tersedia. Kebijakan akses dan integrasi agen masih perlu diuji. |
-| Screenshot dan rekaman | Print, Alt+Print, launcher, serta Waybar memakai satu helper screenshot area/seluruh desktop dengan clipboard dan cancel. Dukungan runtime mengikuti bukti di roadmap; preview/anotasi serta recorder tetap di fase 07A. |
-| Shell dan aplikasi harian | Hyprland menjalankan sesi Wayland. Waybar, Wofi, dan Mako menyediakan panel, launcher, dan notifikasi. Terminal bawaan Foot memakai login shell Bash untuk akun baru. Aplikasi inti mencakup Thunar, Firefox, Mousepad, Ristretto, Evince, dan File Roller. |
-| Pilihan browser yang direncanakan | Firefox masih menjadi default pada sumber saat ini. Installer target menawarkan Brave sebagai rekomendasi, Firefox, Chromium, atau No browser. [Kontrak browser](docs/installer-plan.md#pilihan-browser) · [Isi desktop hari pertama](docs/installer-plan.md#isi-desktop-hari-pertama) |
-| Shell yang direncanakan | Tema Liquid Glass minimalis, Const Hub untuk Settings termasuk tampilan Foot, dock yang dapat dimatikan, widget, dan Dynamic Island opsional. Harness direncanakan mendukung draft widget serta computer use sesuai capability sesi. |
-| Welcome dan aplikasi opsional | Implementasi target membuka tur pintasan pada login pertama. Welcome dan Recommended Apps bisa dibuka dari launcher. Katalog menawarkan LibreOffice, VLC, LocalSend, dan KeePassXC dari Flathub. Const Store direncanakan memakai katalog yang sama. |
+| Screenshot dan rekaman | Print, Alt+Print, dan launcher memakai satu helper screenshot area/seluruh desktop dengan clipboard dan cancel. Preview, anotasi, dan recorder mengikuti fase 07A. |
+| Shell dan aplikasi harian | Dux Shell menyediakan panel, launcher, Quick Settings, notifikasi, dan lock. Terminal Kitty membuka Fish dengan simbol Const ASCII pada Fastfetch. `yay`, Git, dan base-devel disertakan untuk penggunaan AUR sebagai pengguna biasa. Aplikasi inti mencakup Nautilus, mpv, Mousepad, Ristretto, Evince, dan File Roller. |
+| Jaringan dan browser | Wizard menampilkan status NetworkManager dan dapat membuka pengaturan koneksi. Browser menawarkan Firefox sebagai rekomendasi, Chromium, Zen, dan No browser. Paket pilihan masuk transaksi unduhan sebelum perubahan disk. [Kontrak browser](docs/installer-plan.md#pilihan-browser) |
+| Pengembangan shell | Integrasi khusus Const Hub, adapter palet Harness, dan draft widget mengikuti roadmap. |
+| Welcome dan aplikasi opsional | Target membuka panduan shortcut QML pada login pertama, dengan kartu tindakan yang berasal dari Ryoku dan tanpa gambar. Welcome dan Recommended Apps bisa dibuka dari launcher. Katalog menawarkan LibreOffice, VLC, LocalSend, dan KeePassXC dari Flathub. Const Store direncanakan memakai katalog yang sama. |
 | Aplikasi Windows dan Android | Direncanakan untuk sistem terpasang. Wine disiapkan oleh installer agar pengguna bisa memasang dan membuka aplikasi Windows dari desktop tanpa setup runtime manual. Waydroid menyusul sebagai pilihan untuk APK yang kompatibel. Lihat [rancangan kompatibilitas aplikasi](docs/app-compatibility.md). |
 
 ---
@@ -68,9 +63,9 @@ ConstOS/
 │       └── usr/local/bin/const-sandbox
 ├── desktop/                       # Konfigurasi antarmuka Hyprland
 │   ├── hypr/                      # Konfigurasi Hyprland
-│   ├── waybar/                    # Status bar dan metrik desktop
-│   └── wofi/                      # App launcher
-├── installer/                     # Launcher, konfigurasi, dan backend Calamares UEFI
+│   ├── dms/                       # Tema dan preset Const untuk Dux Shell
+│   └── wofi/                      # Launcher cadangan
+├── installer/                     # TUI, konfigurasi, dan backend pemasangan UEFI
 ├── daemons/
 │   └── constd/                    # Prototipe monitor /proc dan /sys
 └── packages/                      # Paket core/desktop dan resep Const Harness
@@ -84,11 +79,11 @@ Lihat panduan lengkap di [docs/build-guide.md](docs/build-guide.md).
 
 ```bash
 packages="$PWD/iso/out/packages-$(date -u +%Y%m%dT%H%M%SZ)"
-calamares="${packages}-calamares"
+installer="${packages}-installer"
 bash packages/build-local.sh "$packages"
-bash packages/build-calamares.sh "$calamares"
-bash iso/buildiso.sh --stage-only --packages-dir "$packages" --calamares-dir "$calamares"
-sudo bash iso/buildiso.sh --packages-dir "$packages" --calamares-dir "$calamares" -v
+bash packages/build-installer.sh "$installer"
+bash iso/buildiso.sh --stage-only --packages-dir "$packages" --installer-dir "$installer"
+sudo bash iso/buildiso.sh --packages-dir "$packages" --installer-dir "$installer" -v
 ```
 
 ---
@@ -97,15 +92,21 @@ sudo bash iso/buildiso.sh --packages-dir "$packages" --calamares-dir "$calamares
 
 ConstOS dikembangkan oleh Alif Constantine. Urutan integrasi, target rilis, dan kriteria verifikasi ada di [roadmap pengembangan](implementation_plan.md).
 
-Arah visual ada di [design.md](design.md). Pemilih aksen, generator palet dari wallpaper, dan Const Hub masih direncanakan. [Audit desktop Ryoku](docs/audits/2026-11-08-ryoku-desktop.md) membandingkan pola yang dipilih dengan sumber ConstOS saat ini.
+Arah visual ada di [design.md](design.md). Pemilih aksen, generator palet dari wallpaper, dan Const Hub masih direncanakan. [Audit desktop Ryoku](docs/audits/2026-11-08-ryoku-desktop.md) merekam perbandingan sebelum integrasi Dux.
 
-Baseline ISO live sudah dibangun di Linux dan diuji di VM UEFI. Bukti itu tidak otomatis berlaku untuk integrasi tema/desktop/installer berikutnya. Gunakan [panduan pengujian terpadu](docs/acceptance-guide.md) untuk memeriksa alur baru dari boot sampai instalasi disk kosong dan reboot tanpa ISO; status aktual ada di roadmap.
+Roadmap membedakan hasil uji kandidat Calamares sebelumnya dari pengujian jalur TUI Ryoku. Rincian artefak serta batas pengujian ada di [bukti Tsukuyomi](implementation_plan.md#koreksi-tsukuyomi--11-november-2026). Gunakan [panduan pengujian terpadu](docs/acceptance-guide.md) untuk mengulang alurnya.
 
 Runner smoke Live UEFI dan workflow Linux manual mencakup dua entri GRUB, dialog dan layar tindakan installer pada VM tanpa disk target, jaringan, ZRAM, dan jurnal TTY. Cara menjalankan serta batas buktinya ada di [panduan build](docs/build-guide.md#build-tercatat-dan-smoke-live-uefi); hasil eksekusi dicatat di roadmap.
 
 Panduan kontribusi agen ada di [AGENTS.md](AGENTS.md), dan prosedur kerja proyek diindeks di [SKILLS.md](SKILLS.md). Perubahan yang memengaruhi perilaku, arsitektur, atau cara kerja harus menyertakan pembaruan dokumen yang relevan; detail aturannya ada di AGENTS.md.
 
 ---
+
+## Kredit
+
+TUI installer, tema GRUB, dan Plymouth berasal dari Ryoku v1.0.7. Login memakai Clockwork Orbital karya Darkkal44 dari salinan qylock di Ryoku. Tsukuyomi memakai tema dark crimson dan menyesuaikan nama produk serta integrasi. Panduan shortcut mengadaptasi komponen Welcome Ryoku. Lisensi dan atribusi ikut dipaketkan. [Ryoku v1.0.7](https://github.com/Ryoku-dev/ryoku/tree/f7197d72de8a21e44b0bea922bdd915f28f6b327) · [qylock](https://github.com/Darkkal44/qylock)
+
+Desktop menjalankan paket Dux Shell resmi dengan preset Const. [Dux Shell](https://github.com/duxlabs-dev/dux-shell)
 
 ## Lisensi
 

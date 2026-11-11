@@ -1,8 +1,9 @@
 [Unit]
-Description=ConstOS Welcome on first login
+Description=Tsukuyomi Welcome on first login
 PartOf=constos-session.target
+After=constos-shell.service
 ConditionEnvironment=WAYLAND_DISPLAY
 
 [Service]
 Type=exec
-ExecStart=/usr/lib/constos/welcome/welcome.py --first-login
+ExecStart=/usr/lib/constos/welcome/guide.py --first-login

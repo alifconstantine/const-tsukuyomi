@@ -8,32 +8,25 @@ if (( $# != 2 )) || [[ $2 != live && $2 != installed ]]; then
 fi
 
 source_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-repo_dir=$(dirname -- "$source_dir")
-boot_dir="$repo_dir/desktop/boot"
-assets="$repo_dir/assets"
+boot_dir="$source_dir/../desktop/boot"
 root=$(realpath -m -- "$1")
 [[ $root != / ]] || { printf 'Refusing to stage into the host root\n' >&2; exit 2; }
 mkdir -p -- "$root"
 mode=$2
 
 install -Dm644 -- "$boot_dir/config/plymouthd.conf" "$root/usr/share/constos/boot/plymouthd.conf"
-for file in constos.plymouth constos.script progress.png progress-track.png; do
+for file in constos.plymouth constos.script; do
     install -Dm644 -- "$boot_dir/plymouth/$file" "$root/usr/share/plymouth/themes/constos/$file"
 done
-install -Dm644 -- "$assets/exports/const-logo-boot.png" "$root/usr/share/plymouth/themes/constos/logo.png"
 
-for file in Main.qml metadata.desktop; do
+for file in Main.qml metadata.desktop theme.conf theme/Main.qml; do
     install -Dm644 -- "$boot_dir/sddm/$file" "$root/usr/share/sddm/themes/constos/$file"
 done
-install -Dm644 -- "$assets/const-logo.svg" "$root/usr/share/sddm/themes/constos/logo.svg"
 install -Dm644 -- "$boot_dir/config/20-constos-theme.conf" "$root/etc/sddm.conf.d/20-constos-theme.conf"
 install -Dm644 -- "$boot_dir/config/99-sddm-stock.conf" "$root/usr/share/constos/boot/99-sddm-stock.conf"
 install -Dm644 -- "$boot_dir/COPYING.txt" "$root/usr/share/constos/boot/COPYING.txt"
-install -Dm644 -- "$assets/const-logo.svg" "$root/usr/share/constos/branding/const-logo.svg"
-install -Dm644 -- "$assets/manifest.json" "$root/usr/share/constos/branding/manifest.json"
-install -Dm644 -- "$assets/exports/constos.svg" "$root/usr/share/icons/hicolor/scalable/apps/constos.svg"
+install -Dm644 -- "$boot_dir/sddm/LICENSE" "$root/usr/share/constos/boot/LICENSE"
 install -Dm644 -- "$source_dir/grub/constos/theme.txt" "$root/usr/share/grub/themes/constos/theme.txt"
-install -Dm644 -- "$assets/exports/const-logo-boot.png" "$root/usr/share/grub/themes/constos/logo.png"
 
 case "$mode" in
     live)

@@ -1,8 +1,0 @@
-[Unit]
-Description=ConstOS mako
-PartOf=constos-session.target
-
-[Service]
-ExecStart=/usr/bin/mako
-Restart=on-failure
-RestartSec=2

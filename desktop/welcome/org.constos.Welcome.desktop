@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
 Name=Welcome
-Comment=Get started with the ConstOS desktop
-Exec=/usr/lib/constos/welcome/welcome.py
-Icon=constos
+Comment=Get started with the Tsukuyomi desktop
+Exec=/usr/lib/constos/welcome/guide.py
+Icon=help-contents
 Terminal=false
 Categories=Utility;

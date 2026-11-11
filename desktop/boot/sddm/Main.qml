@@ -1,285 +1,69 @@
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Window
 
-Pane {
-    id: root
-    width: 1024
-    height: 768
-    padding: 0
-    font.family: "Noto Sans"
-    font.pixelSize: 15
+Item {
+    id: host
+    width: Screen.width
+    height: Screen.height
 
-    readonly property color accent: "#60A5FA"
-    property bool authenticating: false
-    property bool failed: false
-    property string statusMessage: ""
-    property bool showLoginOptions: true
-    readonly property bool hasLoginSelection: user.editText.trim().length > 0
-                                             && session.currentIndex >= 0 && session.currentIndex < session.count
-    readonly property bool loginOptionsVisible: showLoginOptions || !hasLoginSelection
-
-    palette.window: "#161616"
-    palette.base: "#1E1E1E"
-    palette.alternateBase: "#262626"
-    palette.text: "#F5F5F5"
-    palette.windowText: "#F5F5F5"
-    palette.button: "#262626"
-    palette.buttonText: "#F5F5F5"
-    palette.highlight: "#60A5FA"
-    palette.highlightedText: "#101010"
-    palette.mid: "#808080"
-    palette.placeholderText: "#B0B0B0"
-    background: Rectangle { color: "#161616" }
-
-    function login() {
-        if (authenticating || !hasLoginSelection)
-            return;
-        failed = false;
-        statusMessage = qsTr("Checking credentials…");
-        authenticating = true;
-        sddm.login(user.editText.trim(), password.text, session.currentIndex);
+    readonly property bool clock24h: {
+        const value = typeof config !== "undefined" ? config.clock24h : undefined
+        if (value === undefined || value === null || String(value).length === 0)
+            return true
+        return value === true || String(value).toLowerCase() === "true"
     }
 
-    component Picker: ComboBox {
-        id: picker
-        width: parent.width
-        implicitHeight: 42
-        font.pixelSize: 15
-        background: Rectangle {
-            color: picker.enabled ? "#1E1E1E" : "#262626"
-            border.width: picker.activeFocus ? 2 : 1
-            border.color: picker.activeFocus ? root.accent : "#808080"
-            radius: 4
-        }
-    }
-
-    component ActionButton: Button {
-        id: action
-        implicitHeight: 42
-        background: Rectangle {
-            color: action.down ? "#303030" : (action.highlighted ? root.accent : "#262626")
-            border.width: action.activeFocus ? 2 : 1
-            border.color: action.activeFocus ? "#F5F5F5" : (action.highlighted ? root.accent : "#808080")
-            radius: 4
-            opacity: action.enabled ? 1 : 0.5
-        }
-    }
-
-    Connections {
-        target: sddm
-        function onLoginFailed() {
-            root.authenticating = false;
-            root.failed = true;
-            root.statusMessage = qsTr("Login failed. Check your username and password.");
-            password.clear();
-            password.forceActiveFocus();
-        }
-        function onLoginSucceeded() {
-            password.clear();
-            root.statusMessage = qsTr("Starting the session…");
-        }
-        function onInformationMessage(message) {
-            root.statusMessage = message;
-        }
-    }
-
-    Connections {
-        target: keyboard
-        function onCurrentLayoutChanged() {
-            layout.currentIndex = keyboard.currentLayout;
-        }
-    }
-
-    ScrollView {
-        id: scroll
+    Loader {
+        id: theme
         anchors.fill: parent
-        contentWidth: availableWidth
-        contentHeight: form.height + 48
-        clip: true
-
-        Column {
-            id: form
-            width: Math.min(400, scroll.availableWidth - 48)
-            x: (scroll.availableWidth - width) / 2
-            y: Math.max(24, (scroll.availableHeight - height) / 2)
-            spacing: 14
-
-            Image {
-                anchors.horizontalCenter: parent.horizontalCenter
-                source: "logo.svg"
-                width: 100
-                height: 100
-                fillMode: Image.PreserveAspectFit
-            }
-            Label {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: "ConstOS"
-                font.pixelSize: 28
-                font.weight: Font.DemiBold
-            }
-            Label {
-                width: parent.width
-                horizontalAlignment: Text.AlignHCenter
-                text: qsTr("Sign in to %1").arg(sddm.hostName)
-                color: "#B0B0B0"
-                elide: Text.ElideRight
-            }
-
-            Label {
-                width: parent.width
-                visible: !root.loginOptionsVisible
-                horizontalAlignment: Text.AlignHCenter
-                text: user.editText.trim()
-                textFormat: Text.PlainText
-                elide: Text.ElideRight
-            }
-            Column {
-                width: parent.width
-                spacing: 5
-                visible: root.loginOptionsVisible
-                Label { text: qsTr("Username") }
-                Picker {
-                    id: user
-                    model: userModel
-                    textRole: "name"
-                    currentIndex: -1
-                    editable: true
-                    enabled: !root.authenticating
-                    Accessible.name: qsTr("Username")
-                    KeyNavigation.tab: password
-                    onAccepted: password.forceActiveFocus()
-                }
-            }
-            Column {
-                width: parent.width
-                spacing: 5
-                Label { text: qsTr("Password") }
-                TextField {
-                    id: password
-                    width: parent.width
-                    height: 42
-                    echoMode: TextInput.Password
-                    selectByMouse: true
-                    enabled: !root.authenticating
-                    Accessible.name: qsTr("Password")
-                    KeyNavigation.tab: root.loginOptionsVisible ? session : loginButton
-                    onAccepted: root.login()
-                    background: Rectangle {
-                        color: "#1E1E1E"
-                        border.width: password.activeFocus ? 2 : 1
-                        border.color: password.activeFocus ? root.accent : "#808080"
-                        radius: 4
-                    }
-                }
-            }
-            Column {
-                width: parent.width
-                spacing: 5
-                visible: root.loginOptionsVisible
-                Label { text: qsTr("Session") }
-                Picker {
-                    id: session
-                    model: sessionModel
-                    textRole: "name"
-                    currentIndex: count > 0 ? Math.max(0, Math.min(count - 1, sessionModel.lastIndex)) : -1
-                    enabled: !root.authenticating
-                    Accessible.name: qsTr("Desktop session")
-                    KeyNavigation.tab: layout.enabled && layout.count > 0 ? layout : loginButton
-                }
-            }
-            Column {
-                width: parent.width
-                spacing: 5
-                visible: root.loginOptionsVisible && keyboard.layouts.length > 0
-                Label { text: qsTr("Keyboard layout") }
-                Picker {
-                    id: layout
-                    model: keyboard.layouts
-                    textRole: "shortName"
-                    currentIndex: keyboard.currentLayout
-                    enabled: keyboard.enabled && !root.authenticating
-                    Accessible.name: qsTr("Keyboard layout")
-                    KeyNavigation.tab: loginButton
-                    onActivated: index => { keyboard.currentLayout = index; }
-                }
-            }
-            Label {
-                width: parent.width
-                visible: keyboard.capsLock
-                text: qsTr("Caps Lock is on")
-                color: "#FBBF24"
-            }
-            Label {
-                width: parent.width
-                visible: text.length > 0
-                text: session.count === 0 ? qsTr("No desktop session is installed.") : root.statusMessage
-                color: root.failed || session.count === 0 ? "#F87171" : "#B0B0B0"
-                wrapMode: Text.WordWrap
-                Accessible.name: text
-            }
-            ActionButton {
-                id: loginButton
-                width: parent.width
-                text: qsTr("Sign In")
-                highlighted: true
-                enabled: !root.authenticating && root.hasLoginSelection
-                KeyNavigation.tab: loginOptionsButton
-                onClicked: root.login()
-            }
-            ActionButton {
-                id: loginOptionsButton
-                width: parent.width
-                visible: root.hasLoginSelection
-                enabled: !root.authenticating
-                text: root.loginOptionsVisible ? qsTr("Hide sign-in options") : qsTr("Sign-in options")
-                KeyNavigation.tab: powerButton
-                onClicked: {
-                    root.showLoginOptions = !root.showLoginOptions;
-                    if (root.showLoginOptions)
-                        user.forceActiveFocus();
-                    else
-                        password.forceActiveFocus();
-                }
-            }
-            ActionButton {
-                id: powerButton
-                width: parent.width
-                text: qsTr("Power")
-                enabled: !root.authenticating
-                KeyNavigation.tab: root.loginOptionsVisible ? user : password
-                onClicked: powerMenu.open()
-                Menu {
-                    id: powerMenu
-                    y: -height
-                    width: powerButton.width
-                    MenuItem {
-                        text: qsTr("Suspend")
-                        enabled: sddm.canSuspend
-                        onTriggered: sddm.suspend()
-                    }
-                    MenuItem {
-                        text: qsTr("Restart")
-                        enabled: sddm.canReboot
-                        onTriggered: sddm.reboot()
-                    }
-                    MenuItem {
-                        text: qsTr("Shut Down")
-                        enabled: sddm.canPowerOff
-                        onTriggered: sddm.powerOff()
-                    }
-                }
-            }
+        focus: true
+        source: "theme/Main.qml"
+        onLoaded: {
+            if (item.clock24h !== undefined)
+                item.clock24h = host.clock24h
+            if (item.clockLocale !== undefined)
+                item.clockLocale = Qt.locale()
+            Qt.callLater(() => forceActiveFocus(Qt.OtherFocusReason))
         }
     }
 
-    Component.onCompleted: {
-        const rememberedIndex = user.find(userModel.lastUser, Qt.MatchExactly);
-        user.currentIndex = rememberedIndex >= 0 ? rememberedIndex : (user.count === 1 ? 0 : -1);
-        user.editText = user.currentText;
-        root.showLoginOptions = !root.hasLoginSelection;
-        if (user.editText.length > 0)
-            password.forceActiveFocus();
-        else
-            user.forceActiveFocus();
+    // Weston does not advertise the cursor-shape protocol used by Qt on the
+    // desktop. Keep the login pointer in the scene so every selected skin has
+    // one even when the legacy cursor surface cannot be scanned out.
+    HoverHandler {
+        id: pointer
+        cursorShape: Qt.BlankCursor
+    }
+
+    Canvas {
+        width: 26 * scaleFactor
+        height: 26 * scaleFactor
+        z: 2000000
+        visible: pointer.hovered
+        x: pointer.point.position.x
+        y: pointer.point.position.y
+        antialiasing: true
+
+        readonly property real scaleFactor: Math.max(1, Screen.height / 768)
+
+        onPaint: {
+            var ctx = getContext("2d")
+            ctx.reset()
+            ctx.scale(scaleFactor, scaleFactor)
+            ctx.beginPath()
+            ctx.moveTo(0, 0)
+            ctx.lineTo(0, 16)
+            ctx.lineTo(4, 12.5)
+            ctx.lineTo(6.5, 19)
+            ctx.lineTo(9, 18)
+            ctx.lineTo(6.5, 11.5)
+            ctx.lineTo(11, 11.5)
+            ctx.closePath()
+            ctx.fillStyle = "#ffffff"
+            ctx.fill()
+            ctx.lineWidth = 1.2
+            ctx.strokeStyle = "#000000"
+            ctx.stroke()
+        }
     }
 }
