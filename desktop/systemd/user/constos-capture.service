@@ -1,0 +1,8 @@
+[Unit]
+Description=ConstOS capture toolbar
+PartOf=constos-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+ExecStart=/usr/bin/qs -p /usr/share/constos/capture
+ExecStopPost=/usr/bin/constos-capture discard

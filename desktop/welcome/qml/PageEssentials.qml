@@ -22,7 +22,7 @@ Item {
         { chord: "Super + Tab", title: "Workspace overview", description: "See and select open windows.", command: ["dms", "ipc", "call", "hypr", "toggleOverview"] },
         { chord: "Super + ↑↓←→", title: "Window focus", description: "Focus a tile; add Shift to move it. Alt + Tab returns to the last window.", command: [] },
         { chord: "Super + F", title: "Fullscreen", description: "Toggle fullscreen and return to your tiles.", command: [] },
-        { chord: "Super + Shift + S", title: "Screenshot", description: "Select an area. Print also selects an area; Alt + Print captures the screen.", command: ["constos-screenshot", "region"] }
+        { chord: "Super + Shift + S", title: "Capture", description: "Open screenshot and audio tools. Print copies a selected area.", command: ["systemctl", "--user", "start", "constos-capture.service"] }
     ]
 
     Column {

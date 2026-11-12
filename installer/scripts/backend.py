@@ -440,9 +440,16 @@ def configure_target(root, plan):
     keyboard.write_text('Section "InputClass"\n    Identifier "ConstOS keyboard"\n'
                         '    MatchIsKeyboard "on"\n    Option "XkbLayout" "{xkb_layout}"\n'
                         '    Option "XkbVariant" "{xkb_variant}"\nEndSection\n'.format(**plan))
-    # Dux memakai penanda per seri versi untuk kartu What’s New pada login awal.
-    shell_package = capture(['pacman', '--root', root, '-Q', 'dux-shell'])
-    if release := re.match(r'^dux-shell (?:[0-9]+:)?v?([0-9]+\.[0-9]+)', shell_package):
+    # Dux / Tsukuyomi Shell memakai penanda per seri versi untuk kartu What’s New pada login awal.
+    shell_package = ''
+    for pkg in ('tsukuyomi-shell-git', 'tsukuyomi-shell', 'dux-shell'):
+        try:
+            shell_package = capture(['pacman', '--root', root, '-Q', pkg])
+            if shell_package:
+                break
+        except Exception:
+            continue
+    if release := re.match(r'^(?:tsukuyomi-shell(?:-git)?|dux-shell) (?:[0-9]+:)?v?([0-9]+\.[0-9]+)', shell_package):
         series = release[1]
         (etc / 'skel/.config/dms' / f'.changelog-{series}').write_text(series + '\n')
     user = plan['username']

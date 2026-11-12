@@ -1,0 +1,15 @@
+[package]
+name = "constos-capture"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "User-initiated screenshot and audio capture for ConstOS"
+
+[dependencies]
+hound = "3.5"
+libc = "0.2"
+serde = { workspace = true }
+serde_json = { workspace = true }
+signal-hook = { version = "0.3", default-features = false }
+tempfile = "3"
+zbus = "5"

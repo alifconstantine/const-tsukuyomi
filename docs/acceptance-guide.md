@@ -68,10 +68,12 @@ Uji skenario berikut setelah reboot dari disk. Gunakan fixture lokal nonpribadi 
 | Jendela dan workspace | Buka delapan Kitty dengan Super+Enter dalam satu workspace, lalu coba aplikasi lain. Periksa tile, Super+panah, Super+Shift+panah, Alt+Tab, Super+F, dan overview Super+Tab. Cocokkan jendela yang terlihat dengan state compositor dan bar. [Audit workspace](audits/2026-11-11-workspace-windows.md) |
 | Shortcut aplikasi | Super+B membuka browser default akun. Uji pemberitahuan jika default belum tersedia. Periksa Super+N membuka Mousepad dan Super+Esc membuka Quick Settings. [Shortcut desktop](desktop-shortcuts.md) |
 | Clipboard teks | Copy/paste teks Indonesia, beraksen, dan non-Latin antar aplikasi; label/font tetap terbaca |
-| Screenshot area | Tekan Print atau Super+Shift+S, pilih area berisi fixture, lalu paste gambar di aplikasi penerima. Isi dan dimensi harus sesuai pilihan |
+| Screenshot area | Tekan Super+Shift+S, pilih Area berisi fixture, lalu Copy dan Save PNG. Isi dan dimensi harus sesuai pilihan. Ulangi jalur cepat Print. |
+| Screenshot dan anotasi | Pilih Screen, periksa toolbar tidak tertangkap, lalu Annotate dan ekspor dari Satty. Bandingkan gambar sebelum dan sesudah. Uji Escape dari editor. |
 | Screenshot cancel | Isi clipboard dengan teks yang diketahui, mulai seleksi lalu Escape. Paste kembali; clipboard lama tidak boleh berubah |
 | Screenshot layar/error | Jalankan aksi layar dari panel dan periksa hasil. Uji tool/backend gagal hanya pada VM disposable; error harus terlihat tanpa notifikasi sukses palsu |
 | Audio | Putar audio fixture, ubah volume/mute serta output melalui pavucontrol; dengarkan hasil. Jika perangkat input tersedia, periksa sumber dan level mikrofon secara terpisah |
+| Rekaman audio | Di toolbar pilih Record audio, lalu pilih mikrofon atau output sistem. Putar fixture berbeda pada tiap sumber, tekan Stop, dan putar WAV dari Play. Periksa durasi, isi, lock, serta sesi yang mencoba merekam dua kali. |
 | Portal | Buka file chooser dari aplikasi portal dan screen sharing browser. Pilih sumber fixture, periksa isi yang benar, lalu Stop/cancel/denied. Introspeksi interface saja bukan bukti screen sharing |
 | Jaringan | Periksa DHCP dan akses halaman melalui jaringan VM. Wi-Fi fisik diuji pada perangkat tersendiri, bukan disimpulkan dari NAT VM |
 | Bluetooth | Buka UI pairing. Jika adapter tidak diteruskan, catat unavailable; pairing hanya lulus bila diuji dengan perangkat nyata |

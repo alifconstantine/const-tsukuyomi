@@ -15,7 +15,7 @@ Konfigurasi ini mengikuti pintasan Ryoku yang punya padanan pada desktop ConstOS
 | Super+F / Super+V | Toggle fullscreen / floating untuk jendela aktif. Keluar dari fullscreen untuk melihat tile lain. |
 | Super+1…0 / Super+Shift+1…0 | Pindah workspace / pindahkan jendela ke workspace lain. |
 | Super+Q / Super+L | Tutup jendela aktif / kunci sesi. |
-| Super+Shift+S atau Print / Alt+Print | Pilih area untuk disalin / salin tangkapan layar penuh. [Rencana capture](capture-plan.md) |
+| Super+Shift+S / Print / Alt+Print | Buka toolbar capture / salin area / salin layar. [Panduan capture](capture-plan.md) |
 
 Paket `constos-desktop` memasang default di `/etc/skel/.config/hypr/hyprland.lua`. Akun baru mengambilnya saat dibuat. Pada akun lama, bandingkan default tersebut dengan `~/.config/hypr/hyprland.lua`, simpan salinan konfigurasi akun, lalu gabungkan aturan `kitty-suppress-maximize`, pengaturan `binds.movefocus_cycles_fullscreen`, dan binding yang diinginkan. Muat ulang dengan `hyprctl reload` di sesi ConstOS.
 

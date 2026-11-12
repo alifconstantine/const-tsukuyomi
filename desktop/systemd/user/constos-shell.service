@@ -7,7 +7,8 @@ ConditionEnvironment=WAYLAND_DISPLAY
 Type=notify
 NotifyAccess=main
 Environment=QS_DISABLE_CRASH_HANDLER=1
-ExecStart=/usr/bin/dms run --session
+Environment=DMS_QS_CHILD=1
+ExecStart=/usr/bin/dms run --session --qs-child
 Restart=on-failure
 RestartSec=2
 TimeoutStartSec=90

@@ -1,0 +1,57 @@
+# Maintainer: ConstOS Team <contact@constos.org>
+pkgname=tsukuyomi-shell-git
+_pkgname=tsukuyomi-shell
+_binname=dms
+pkgver=2.1.2.r0.g$(date +%Y%m%d)
+pkgrel=1
+pkgdesc='Tsukuyomi desktop shell for Hyprland built with Quickshell & Go (fork of Dux Shell)'
+arch=('x86_64')
+url="https://github.com/alifconstantine/tsukuyomi-shell"
+license=('MIT')
+
+depends=(
+  'quickshell'
+  'accountsservice'
+  'pipewire'
+  'wireplumber'
+)
+
+optdepends=(
+  'matugen: Dynamic wallpaper-based theming'
+  'cava: Audio visualizer'
+  'brightnessctl: Brightness control'
+  'networkmanager: Network management'
+)
+
+makedepends=('git' 'go' 'make')
+provides=('dux-shell=2.1.2' 'dms-shell=2.1.2')
+conflicts=('dux-shell' 'dms-shell')
+
+source=("git+https://github.com/alifconstantine/tsukuyomi-shell.git")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "$_pkgname"
+  git describe --long --tags --always 2>/dev/null | sed 's/^v//;s/-/./g' || echo "0.0.0.r$(git rev-list --count HEAD)"
+}
+
+prepare() {
+  cd "$_pkgname"
+  [ -f .gitmodules ] || return 0
+  git submodule sync
+  git submodule update --init --recursive
+}
+
+build() {
+  cd "$_pkgname/core"
+  make sync-shell
+  export GOFLAGS="-buildmode=pie -trimpath -mod=readonly -modcacherw"
+  go build -tags 'distro_binary withshell' -ldflags "-s -w -linkmode=external" -o "$_binname" "./cmd/$_binname"
+}
+
+package() {
+  cd "$_pkgname"
+  install -Dm0755 "core/$_binname" "$pkgdir/usr/bin/$_binname"
+  install -Dm0644 -t "$pkgdir/usr/share/doc/$pkgname/" README.md 2>/dev/null || true
+  install -Dm0644 "assets/systemd/$_binname.service" "$pkgdir/usr/lib/systemd/user/$_binname.service" 2>/dev/null || true
+}

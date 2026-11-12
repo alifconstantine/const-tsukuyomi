@@ -29,6 +29,7 @@ xorg-xauth
 wofi
 grim
 slurp
+satty
 wl-clipboard
 brightnessctl
 xdg-desktop-portal

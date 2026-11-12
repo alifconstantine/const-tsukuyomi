@@ -21,6 +21,7 @@ Untuk installer, browser, atau handoff ke desktop, baca [spesifikasi installer](
 - Untuk TUI live, gunakan `packages/build-installer.sh` sebagai pengguna biasa dan berikan hasilnya lewat `--installer-dir DIR`. Cocokkan fingerprint dan uji `constos-tui --version` serta wizard pada ISO baru.
 - Untuk capture, periksa jalur screenshot, recorder, dan editor yang benar-benar terpasang; cocokkan kemampuan aktual dengan status serta acceptance di roadmap. Jangan memakai izin computer use sebagai jalan pintas.
 - Untuk daemon dan packaging, temukan sumber serta konsumen yang benar-benar dipakai sebelum menambah protokol, menyalin collector, atau mengganti executable.
+- Untuk desktop shell (fork `tsukuyomi-shell`), source dikelola di repositori fork (`alifconstantine/tsukuyomi-shell`) dan dikemas via `packages/tsukuyomi-shell/PKGBUILD`. Pastikan submodule `dux-qml-common` dan `dux-qt-base` terinisialisasi sebelum `make sync-shell`. Selalu gunakan flag `--qs-child` atau `DMS_QS_CHILD=1` (baik pada service `constos-shell.service` maupun saat testing lokal `dms run --qs-child -c <dir>`) agar memanfaatkan runtime Quickshell upstream (`/usr/bin/qs`) tanpa ketergantungan `libdux-qt-base.so.0`.
 
 ## 2. Pilih pemeriksaan yang sesuai
 

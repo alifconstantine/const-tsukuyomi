@@ -1,7 +1,7 @@
 # Maintainer: ConstOS
 pkgname=constos-core
 pkgver=0.1.0
-pkgrel=7
+pkgrel=8
 pkgdesc='ConstOS system identity, maintenance CLI, and session telemetry'
 arch=('x86_64')
 url='https://github.com/alifconstantine/const-tsukuyomi'
@@ -16,13 +16,14 @@ build() {
   cd "$srcdir/constos"
   # The installed CLI must run on the generic x86_64 target, even on a native-tuned builder.
   CARGO_ENCODED_RUSTFLAGS=-Ctarget-cpu=x86-64 \
-    cargo build --locked --release --package constosctl --package constd --target-dir "$srcdir/target"
+    cargo build --locked --release --package constosctl --package constd --package constos-capture --target-dir "$srcdir/target"
 }
 
 package() {
   local tree="$srcdir/constos"
   install -Dm755 "$srcdir/target/release/const" "$pkgdir/usr/bin/const"
   install -Dm755 "$srcdir/target/release/constd" "$pkgdir/usr/bin/constd"
+  install -Dm755 "$srcdir/target/release/constos-capture" "$pkgdir/usr/bin/constos-capture"
   install -Dm644 "$tree/packages/constos-core/files/constd.service" "$pkgdir/usr/lib/systemd/user/constd.service"
   install -Dm644 "$tree/packages/constos-core/files/org.constos.Monitor1.service" "$pkgdir/usr/share/dbus-1/services/org.constos.Monitor1.service"
   install -Dm644 "$tree/iso/airootfs/etc/os-release" "$pkgdir/etc/os-release"

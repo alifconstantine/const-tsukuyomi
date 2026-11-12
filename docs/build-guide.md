@@ -38,7 +38,7 @@ Staging ISO memanggil `iso/install-boot.sh ROOT live` dan `installer/install.sh 
 
 Preset Tsukuyomi memakai dark crimson pada GRUB/Plymouth, Clockwork Orbital, TUI, Dux, dan terminal. `desktop/welcome/qml` mengadaptasi kartu shortcut Ryoku; `guide.py` menyimpan state per akun. Regenerasi ASCII khusus Fastfetch: `python3 assets/export-ascii.py` (Pillow dan rsvg-convert). `yay`, Git, dan base-devel masuk manifest target dari repo bertanda tangan.
 
-Target mengunduh paket resmi bertanda tangan `extra/dux-shell` saat preflight. Unit pengguna menjalankan `/usr/bin/dms run --session`, dengan preset Const dari paket desktop.
+Desktop shell disediakan oleh paket `tsukuyomi-shell-git` (resep di `packages/tsukuyomi-shell/PKGBUILD`, fork dari `dux-shell`) atau fallback `extra/dux-shell`. Build paket memerlukan `go`, `make`, `git`, serta inisialisasi submodule `dux-qml-common` dan `dux-qt-base`. Unit pengguna menjalankan `/usr/bin/dms run --session --qs-child` dengan `DMS_QS_CHILD=1`, menggunakan runtime Quickshell upstream `/usr/bin/qs` dengan preset Const dari paket desktop. Untuk pengujian live QML saat pengembangan: `dms run --qs-child -c <path_ke_quickshell>`.
 
 GRUB, Plymouth, dan Clockwork Orbital SDDM berasal dari Ryoku v1.0.7. Build mengambil sumber dari `iso/grub` dan `desktop/boot`, dengan palet Const dan tampilan tanpa logo. Atribusi ada di [COPYING.txt](../desktop/boot/COPYING.txt).
 

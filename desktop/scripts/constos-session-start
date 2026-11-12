@@ -6,7 +6,7 @@ export XDG_CURRENT_DESKTOP=Hyprland XDG_SESSION_DESKTOP=constos XDG_SESSION_TYPE
 export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
 variables=(WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE XDG_DATA_HOME XDG_STATE_HOME)
-for variable in DISPLAY HYPRLAND_INSTANCE_SIGNATURE XDG_DATA_DIRS; do
+for variable in DISPLAY HYPRLAND_INSTANCE_SIGNATURE XDG_DATA_DIRS XDG_SESSION_ID; do
     [[ -z ${!variable:-} ]] || variables+=("$variable")
 done
 dbus-update-activation-environment --systemd "${variables[@]}"

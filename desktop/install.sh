@@ -37,6 +37,8 @@ install -Dm644 -- "$source_dir/portal/hyprland-portals.conf" "$root/etc/xdg/xdg-
 install -Dm644 -- "$source_dir/schemas/90_constos.gschema.override" "$root/usr/share/glib-2.0/schemas/90_constos.gschema.override"
 install -Dm644 -- "$source_dir/pacman-hooks/31-constos-glib-schemas.hook" "$root/usr/share/libalpm/hooks/31-constos-glib-schemas.hook"
 
+install -Dm644 -- "$source_dir/capture/shell.qml" "$root/usr/share/constos/capture/shell.qml"
+
 welcome="$source_dir/welcome"
 install -Dm755 -- "$welcome/welcome.py" "$root/usr/lib/constos/welcome/welcome.py"
 install -Dm644 -- "$welcome/catalog.py" "$root/usr/lib/constos/welcome/catalog.py"

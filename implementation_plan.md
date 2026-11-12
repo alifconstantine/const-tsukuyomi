@@ -16,7 +16,7 @@ ConstOS dikembangkan sebagai distro Linux untuk pengembangan perangkat lunak dan
 | Diagnosis, telemetri, dan AI | `constos-core` memasang CLI Rust `const` serta daemon `constd` dengan aktivasi D-Bus sesi. Staging live mengambil daemon dari paket core. `const doctor` memeriksa kernel, swap ZRAM, unit systemd yang gagal, ruang tersedia di `/`, serta konfigurasi Snapper dan mount `/.snapshots`. | Buktikan Diagnostics pada ISO baru. Sambungkan UI sesi ke kontrak snapshot. Uji dua pemeriksaan storage pada target terpasang. |
 | Pembaruan | `const update` membuka transaksi penuh pacman dari terminal pada sistem terpasang. | Siapkan repo rilis ConstOS bertanda tangan dan tuntaskan skenario update, reboot, dan recovery pada kandidat rilis. |
 | Capture desktop | Print, Alt+Print, dan launcher memanggil `constos-screenshot`. Bukti screenshot dari ISO antara tetap di bawah. | Ulangi screenshot, cancel, dan portal di sesi Dux. |
-| Shell dan aplikasi target | Target menjalankan paket Dux resmi dengan preset Const. Kitty/Fish memakai Fastfetch dengan simbol Const ASCII khusus terminal. Launcher, Quick Settings, notifikasi, lock, dan Nautilus diuji pada kandidat desktop sebelumnya. MP4 dan keluaran audio virtual lulus pada revisi playback. | Uji default aplikasi lain, aksesibilitas, beberapa monitor, dan audio perangkat fisik. |
+| Shell dan aplikasi target | Target beralih ke Tsukuyomi Shell (`tsukuyomi-shell-git`, fork kustom `dux-shell`) dengan preset Const. Resep packaging lokal disiapkan di `packages/tsukuyomi-shell/PKGBUILD`. Unit `constos-shell.service` menjalankan `/usr/bin/dms run --session --qs-child` dengan `DMS_QS_CHILD=1` agar memakai runtime Quickshell upstream. Backend installer mendukung query `tsukuyomi-shell-git`, `tsukuyomi-shell`, dan `dux-shell`. Kitty/Fish memakai Fastfetch dengan simbol Const ASCII khusus terminal. MP4 dan keluaran audio virtual lulus pada revisi playback. | Uji kustomisasi surface QML baru, aksesibilitas, beberapa monitor, dan audio perangkat fisik. |
 
 ### Koreksi Tsukuyomi · 11 November 2026
 
@@ -382,7 +382,7 @@ Paket final di subdirektori `final-packages/` memiliki SHA-256 `c77011d16aec58cd
 
 ## Fase 07A · Screenshot, rekaman video, dan rekaman audio
 
-Urutan implementasi mengikuti [rencana capture yang merujuk Ryoshot](docs/capture-plan.md). Shortcut Super+Shift+S memakai seleksi area sampai toolbar siap.
+Super+Shift+S membuka toolbar Quickshell untuk screenshot, anotasi Satty, dan WAV dari PipeWire. Lihat [pemakaian dan rencana capture yang merujuk Ryoshot](docs/capture-plan.md).
 
 Ini fitur pengguna desktop, terpisah dari observasi agen di fase 12. Gunakan aplikasi/backend Wayland yang sudah tersedia sebelum menulis encoder atau layanan capture sendiri. `grim`/`slurp` adalah baseline screenshot saat ini; kandidat recorder dipilih setelah uji portal, audio, format, dan konsumsi resource pada build target. Tidak ada dukungan window/region, pause, encoder hardware, atau audio sistem yang diklaim hanya karena paket terpasang.
 

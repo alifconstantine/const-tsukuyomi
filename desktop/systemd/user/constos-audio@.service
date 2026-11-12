@@ -1,0 +1,11 @@
+[Unit]
+Description=ConstOS audio capture from PipeWire node %i
+PartOf=constos-session.target
+ConditionEnvironment=XDG_SESSION_ID
+After=pipewire.service wireplumber.service
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/constos-capture record %i
+KillMode=mixed
+TimeoutStopSec=8s

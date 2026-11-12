@@ -15,7 +15,7 @@
 
 ## Tentang ConstOS
 
-ConstOS adalah distribusi Linux berbasis CachyOS untuk pengembangan perangkat lunak dan penggunaan desktop sehari-hari. ISO menargetkan x86_64 UEFI dengan kernel CachyOS BORE. Sesi installer membuka TUI Ryoku yang diadaptasi untuk ConstOS melalui Cage dan Foot. Sesi terpasang memakai Hyprland dengan Dux Shell berpreset Const. Const Harness adalah integrasi yang direncanakan untuk edisi berikutnya.
+ConstOS adalah distribusi Linux berbasis CachyOS untuk pengembangan perangkat lunak dan penggunaan desktop sehari-hari. ISO menargetkan x86_64 UEFI dengan kernel CachyOS BORE. Sesi installer membuka TUI Ryoku yang diadaptasi untuk ConstOS melalui Cage dan Foot. Sesi terpasang memakai Hyprland dengan Tsukuyomi Shell (fork kustom Dux Shell) berpreset Const. Const Harness adalah integrasi yang direncanakan untuk edisi berikutnya.
 
 ---
 
@@ -32,8 +32,8 @@ Arsitektur komponen, batas izin, dan pemisahan profil live dari sistem terpasang
 | Diagnosis dan telemetri | Paket `constos-core` memasang CLI Rust `const` pada sistem terpasang. Jalankan `const doctor` tanpa `sudo` untuk memeriksa kernel, swap ZRAM, unit systemd yang gagal, ruang tersedia di `/`, serta konfigurasi Snapper dan mount `/.snapshots`. `const status --json` menyajikan snapshot metrik. Profil live dan paket core menyiapkan daemon Rust `constd` yang aktif saat diminta lewat D-Bus sesi. Integrasi Monitor, widget, dan Harness mengikuti roadmap. [Kontrak telemetri](docs/architecture.md#telemetri-sesi) |
 | Pembaruan | Jalankan `const update` dari terminal pada sistem terpasang. Jika pembaruan tersedia, pacman menampilkan paket OS dan aplikasi dari repo yang dikonfigurasi untuk dikonfirmasi dalam satu transaksi. Lihat [panduan update dan recovery](docs/acceptance-guide.md#update-dan-recovery) untuk cakupan dan verifikasi. |
 | Sandbox dan izin | Ada wrapper Bubblewrap yang menolak eksekusi saat `bwrap` tidak tersedia. Kebijakan akses dan integrasi agen masih perlu diuji. |
-| Screenshot dan rekaman | Super+Shift+S dan Print memilih area. Alt+Print menyalin layar penuh. Preview, anotasi, dan recorder mengikuti [rencana capture](docs/capture-plan.md). |
-| Shell dan aplikasi harian | Dux Shell menyediakan panel, launcher, Quick Settings, notifikasi, dan lock. Terminal Kitty membuka Fish dengan simbol Const ASCII pada Fastfetch. `yay`, Git, dan base-devel disertakan untuk penggunaan AUR sebagai pengguna biasa. Aplikasi inti mencakup Nautilus, mpv, Mousepad, Ristretto, Evince, dan File Roller. |
+| Screenshot dan rekaman | Super+Shift+S membuka toolbar screenshot dan rekam audio. Print menyalin area dan Alt+Print menyalin layar. Toolbar menyediakan pratinjau, Save PNG, anotasi Satty, serta rekaman WAV dari mikrofon atau audio sistem. [Pemakaian dan rencana capture](docs/capture-plan.md) |
+| Shell dan aplikasi harian | Tsukuyomi Shell (`tsukuyomi-shell-git`) menyediakan panel, launcher, Quick Settings, notifikasi, dan lock melalui runner `dms` dengan Quickshell upstream. Terminal Kitty membuka Fish dengan simbol Const ASCII pada Fastfetch. `yay`, Git, dan base-devel disertakan untuk penggunaan AUR sebagai pengguna biasa. Aplikasi inti mencakup Nautilus, mpv, Mousepad, Ristretto, Evince, dan File Roller. |
 | Jaringan dan browser | Wizard menampilkan status NetworkManager dan dapat membuka pengaturan koneksi. Browser menawarkan Firefox sebagai rekomendasi, Chromium, Zen, dan No browser. Paket pilihan masuk transaksi unduhan sebelum perubahan disk. [Kontrak browser](docs/installer-plan.md#pilihan-browser) |
 | Pengembangan shell | Integrasi khusus Const Hub, adapter palet Harness, dan draft widget mengikuti roadmap. |
 | Welcome dan aplikasi opsional | Target membuka panduan shortcut QML pada login pertama, dengan kartu tindakan yang berasal dari Ryoku dan tanpa gambar. Welcome dan Recommended Apps bisa dibuka dari launcher. Katalog menawarkan LibreOffice, VLC, LocalSend, dan KeePassXC dari Flathub. Const Store direncanakan memakai katalog yang sama. |
@@ -108,7 +108,7 @@ Panduan kontribusi agen ada di [AGENTS.md](AGENTS.md), dan prosedur kerja proyek
 
 TUI installer, tema GRUB, dan Plymouth berasal dari Ryoku v1.0.7. Login memakai Clockwork Orbital karya Darkkal44 dari salinan qylock di Ryoku. Tsukuyomi memakai tema dark crimson dan menyesuaikan nama produk serta integrasi. Panduan shortcut mengadaptasi komponen Welcome Ryoku. Lisensi dan atribusi ikut dipaketkan. [Ryoku v1.0.7](https://github.com/Ryoku-dev/ryoku/tree/f7197d72de8a21e44b0bea922bdd915f28f6b327) · [qylock](https://github.com/Darkkal44/qylock)
 
-Desktop menjalankan paket Dux Shell resmi dengan preset Const. [Dux Shell](https://github.com/duxlabs-dev/dux-shell)
+Desktop menjalankan paket Tsukuyomi Shell (fork dari Dux Shell) dengan preset Const. [Tsukuyomi Shell](https://github.com/alifconstantine/tsukuyomi-shell) · [Dux Shell Upstream](https://github.com/duxlabs-dev/dux-shell)
 
 ## Lisensi
 

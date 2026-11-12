@@ -22,6 +22,12 @@ hl.config({
     misc = { disable_hyprland_logo = true, disable_splash_rendering = true, force_default_wallpaper = 0 },
 })
 
+hl.layer_rule({
+    name = "capture-toolbar-no-animation",
+    match = { namespace = "^constos-capture$" },
+    no_anim = true,
+})
+
 hl.on("hyprland.start", function()
     hl.exec_cmd("constos-session-start")
 end)
@@ -60,7 +66,7 @@ hl.bind("SUPER + L", hl.dsp.exec_cmd(lock))
 hl.bind("SUPER + SHIFT + M", hl.dsp.exit())
 hl.bind("Print", hl.dsp.exec_cmd("constos-screenshot region"))
 hl.bind("ALT + Print", hl.dsp.exec_cmd("constos-screenshot screen"))
-hl.bind("SUPER + SHIFT + S", hl.dsp.exec_cmd("constos-screenshot region"))
+hl.bind("SUPER + SHIFT + S", hl.dsp.exec_cmd("systemctl --user start constos-capture.service"))
 hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), { repeating = true })
 hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"), { repeating = true })
 hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))

@@ -3,6 +3,7 @@ members = [
     "crates/const-collector",
     "crates/constosctl",
     "crates/constd",
+    "crates/constos-capture",
 ]
 resolver = "2"
 

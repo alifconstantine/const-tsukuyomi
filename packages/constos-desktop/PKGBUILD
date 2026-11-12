@@ -1,17 +1,17 @@
 # Maintainer: ConstOS
 pkgname=constos-desktop
 pkgver=0.1.0
-pkgrel=8
+pkgrel=9
 pkgdesc='ConstOS Hyprland desktop, session and installed boot themes'
 arch=('any')
 url='https://github.com/alifconstantine/const-tsukuyomi'
 license=('GPL-3.0-only')
 install=constos-desktop.install
 depends=(
-  'constos-core' 'hyprland' 'sddm' 'plymouth' 'grub'
+  'constos-core>=0.1.0-8' 'hyprland' 'sddm' 'plymouth' 'grub'
   'qt6-declarative' 'qt6-svg' 'qt6-5compat' 'xorg-server' 'xorg-xauth'
   'dux-shell' 'quickshell' 'kitty' 'fish' 'wofi' 'fastfetch' 'yay' 'base-devel' 'git'
-  'grim' 'slurp' 'wl-clipboard' 'brightnessctl' 'pipewire' 'pipewire-alsa' 'pipewire-pulse' 'wireplumber'
+  'grim' 'slurp' 'wl-clipboard' 'satty' 'brightnessctl' 'pipewire' 'pipewire-alsa' 'pipewire-pulse' 'wireplumber'
   'xdg-desktop-portal' 'xdg-desktop-portal-hyprland' 'xdg-desktop-portal-gtk'
   'nm-connection-editor' 'pavucontrol'
   'nautilus' 'gvfs' 'udisks2' 'mpv' 'mpv-mpris'
