@@ -314,8 +314,9 @@ def finalize(root):
     if list((root / 'etc/mkinitcpio.conf.d').glob('*archiso*')):
         raise RuntimeError('Live initramfs configuration found on the target.')
     for path in (root / 'etc/sddm.conf.d').glob('*.conf'):
-        if re.search(r'^\s*\[Autologin\]', path.read_text(), re.M):
-            raise RuntimeError('Autologin configuration is not allowed on the target.')
+        text = path.read_text()
+        if re.search(r'^\s*\[Autologin\]', text, re.M) and re.search(r'^\s*User\s*=\s*liveuser\b', text, re.M):
+            raise RuntimeError('Autologin configuration is not allowed for liveuser on the target.')
     grub = root / 'etc/default/grub'
     grub_text = grub.read_text()
     grub_text = re.sub(r'^GRUB_CMDLINE_LINUX_DEFAULT=.*$',
@@ -461,6 +462,9 @@ def configure_target(root, plan):
     sudoers.parent.mkdir(exist_ok=True)
     sudoers.write_text('%wheel ALL=(ALL:ALL) ALL\n')
     sudoers.chmod(0o440)
+    autologin = etc / 'sddm.conf.d/10-autologin.conf'
+    autologin.parent.mkdir(parents=True, exist_ok=True)
+    autologin.write_text(f'[Autologin]\nUser={user}\nSession=constos.desktop\nRelogin=false\n')
     command(['systemd-machine-id-setup', '--root', root])
 
 

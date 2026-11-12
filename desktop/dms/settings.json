@@ -34,5 +34,30 @@
       "attachToScreenEdge": false,
       "transparency": 0.92
     }
+  ],
+  "dockConfigs": [
+    {
+      "id": "default-dock",
+      "name": "Tsukuyomi Dock",
+      "enabled": true,
+      "screenPreferences": [
+        "all"
+      ],
+      "position": 1,
+      "mode": "compact",
+      "taskbarAlign": "center",
+      "iconSize": 42,
+      "spacing": 8,
+      "bottomGap": 8,
+      "transparency": 0.92,
+      "autoHide": false,
+      "launcherEnabled": false,
+      "pinnedApps": [
+        "kitty.desktop",
+        "org.gnome.Nautilus.desktop",
+        "firefox.desktop",
+        "mousepad.desktop"
+      ]
+    }
   ]
 }

@@ -68,7 +68,7 @@ curl
 wget
 rsync
 unzip
-extra/dux-shell
+tsukuyomi-shell-git
 kitty
 fish
 nautilus

@@ -45,6 +45,14 @@ class TargetRecoverySafetyTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'Autologin configuration is not allowed'):
             backend.finalize(self.root)
 
+    def test_finalize_allows_target_user_autologin(self):
+        (self.root / 'etc/sddm.conf.d/10-autologin.conf').write_text('[Autologin]\nUser=alif\nSession=constos.desktop\n')
+        (self.root / 'etc/snapper/configs').mkdir(parents=True)
+        (self.root / 'etc/snapper/configs/root').write_text('ALLOW_USERS=""\n')
+        with patch.object(backend, 'command'):
+            backend.finalize(self.root)
+        self.assertTrue((self.root / 'etc/sddm.conf.d/10-autologin.conf').exists())
+
     def test_snapper_setup_preserves_files_at_unmounted_snapshot_path(self):
         snapshots = self.root / '.snapshots'
         snapshots.mkdir()

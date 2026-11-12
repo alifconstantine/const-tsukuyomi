@@ -10,7 +10,7 @@ install=constos-desktop.install
 depends=(
   'constos-core>=0.1.0-8' 'hyprland' 'sddm' 'plymouth' 'grub'
   'qt6-declarative' 'qt6-svg' 'qt6-5compat' 'xorg-server' 'xorg-xauth'
-  'dux-shell' 'quickshell' 'kitty' 'fish' 'wofi' 'fastfetch' 'yay' 'base-devel' 'git'
+  'tsukuyomi-shell-git' 'quickshell' 'kitty' 'fish' 'wofi' 'fastfetch' 'yay' 'base-devel' 'git'
   'grim' 'slurp' 'wl-clipboard' 'satty' 'brightnessctl' 'pipewire' 'pipewire-alsa' 'pipewire-pulse' 'wireplumber'
   'xdg-desktop-portal' 'xdg-desktop-portal-hyprland' 'xdg-desktop-portal-gtk'
   'nm-connection-editor' 'pavucontrol'
